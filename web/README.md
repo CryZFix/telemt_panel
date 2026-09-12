@@ -50,7 +50,7 @@ while keeping lazy routes separate and preserving module initialization order.
 Initial HTML module-preload hints are disabled to avoid false cross-world
 service-worker mismatch warnings in affected Chromium versions. Lazy navigation
 still preloads dependencies and CSS; the service worker remains enabled.
-The desktop asset tests cover the emitted HTML, the People script-request
+The desktop asset tests cover the emitted HTML, the Users script-request
 budget and a service-worker-controlled reload.
 
 ## Scripts

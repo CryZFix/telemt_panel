@@ -2,7 +2,7 @@ import type { ru } from "./ru";
 
 // Widen strips the string-literal types `ru.ts`'s `as const` produces so
 // another dictionary of the same SHAPE (en.ts) can be typed against it:
-// without this, `Dict["nav"]["people"]` would be the literal "Люди" and no
+// without this, `Dict["nav"]["people"]` would be the literal "Пользователи" and no
 // English translation could ever be assignable.
 // The homomorphic mapped type also covers arrays: over a tuple it keeps the
 // arity (byteUnits stays five slots, every PluralForms stays three), so

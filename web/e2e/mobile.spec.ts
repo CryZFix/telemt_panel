@@ -34,7 +34,15 @@ test("login → people → create user → share → sub-page → overview → p
 
   await test.step("login lands on /people", async () => {
     await login();
-    await expect(page.getByRole("heading", { name: "Люди" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Пользователи" })).toBeVisible();
+    const usersLink = page.getByTestId("mobile-bottom-nav").getByRole("link", { name: "Пользователи", exact: true });
+    await expect(usersLink).toBeVisible();
+    for (const width of [360, 390]) {
+      await page.setViewportSize({ width, height: 640 });
+      expect(await usersLink.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    await page.setViewportSize({ width: 360, height: 640 });
   });
 
   await test.step("create a user via the Sheet form", async () => {

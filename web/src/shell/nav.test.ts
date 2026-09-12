@@ -49,7 +49,7 @@ describe("the grouped navigation", () => {
     }
     expect(NAV_ITEMS.map((item) => ru.nav[item.labelKey])).toEqual([
       "Сводка",
-      "Люди",
+      "Пользователи",
       "Пульс",
       "Журнал",
       "Сервер",

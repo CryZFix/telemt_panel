@@ -62,6 +62,8 @@ TELEMT_API_ENABLED=""
 TELEMT_URL=""
 TELEMT_AUTH=""
 LISTEN="0.0.0.0:8080"
+BASE_PATH=""
+BEHIND_PROXY=0
 TLS_MODE="http"
 TLS_DOMAIN=""
 TLS_CERT=""
@@ -145,6 +147,20 @@ t() {
     en:tls_http_notice) _f='No HTTPS: passwords, sessions and data are unencrypted. Not recommended for public access; passkeys are unavailable on ordinary HTTP. This is an explicit mode, never an automatic HTTPS fallback.' ;;
     ru:tls_proxy_notice) _f='HTTPS обеспечивает ваш reverse proxy. Панель по умолчанию слушает только 127.0.0.1; trusted_proxies настройте для реального адреса прокси.' ;;
     en:tls_proxy_notice) _f='Your reverse proxy provides HTTPS. The panel defaults to 127.0.0.1; configure trusted_proxies for the actual proxy address.' ;;
+    ru:q_proxy_path_mode) _f='Путь панели: 1) Корень домена /  2) Свой путь  3) Случайный путь' ;;
+    en:q_proxy_path_mode) _f='Panel path: 1) Domain root /  2) Custom path  3) Random path' ;;
+    ru:q_proxy_path) _f='Путь панели (например /panel)' ;;
+    en:q_proxy_path) _f='Panel path (for example /panel)' ;;
+    ru:bad_proxy_path) _f='Путь: только ASCII-буквы, цифры и . _ ~ / -; без пробелов, URL, пустых сегментов и сегментов «.» или «..».' ;;
+    en:bad_proxy_path) _f='Path: ASCII letters, digits and . _ ~ / - only; no spaces, URLs, empty segments, . or .. segments.' ;;
+    ru:proxy_path_env) _f='TP_BASE_PATH используется только с TP_TLS_MODE=proxy.' ;;
+    en:proxy_path_env) _f='TP_BASE_PATH requires TP_TLS_MODE=proxy.' ;;
+    ru:s_base_path) _f='Путь панели' ;;
+    en:s_base_path) _f='Panel path' ;;
+    ru:proxy_config_hint) _f='Настройте HTTPS в вашем прокси. Ниже пример для выбранного пути; замените panel.example.com своим доменом. Конфигурация прокси не изменялась. Путь не заменяет авторизацию.' ;;
+    en:proxy_config_hint) _f='Configure HTTPS in your proxy. Example for the chosen path follows; replace panel.example.com with your domain. Proxy configuration was not modified. A path does not replace authentication.' ;;
+    ru:proxy_nginx_context) _f='nginx (внутри server с настроенным HTTPS):' ;;
+    en:proxy_nginx_context) _f='nginx (inside an HTTPS server block):' ;;
     ru:tls_bad_domain) _f='Нужен один DNS-домен без схемы, порта, пробелов и wildcard (ASCII или punycode).' ;;
     en:tls_bad_domain) _f='Use one DNS domain without a scheme, port, whitespace or wildcard (ASCII or punycode).' ;;
     ru:tls_bind_rights) _f='Для ACME/низкого порта нужны права bind. В этой init-системе выберите запуск root явно (TP_RUN_AS=root) либо настройте права сервиса вручную. Установка остановлена.' ;;
@@ -228,6 +244,7 @@ t() {
   TP_TELEMT_SERVICE, TP_SUBPAGE=yes|no, TP_RUN_AS=user|root, TP_DATA_DIR,
   TP_VARIANT=full|lite, TP_STORE_DRIVER=sqlite|memory
   TP_TLS_MODE=acme|certificate|proxy|http (при --yes по умолчанию http),
+  TP_BASE_PATH=/|/my-panel|random (только proxy; по умолчанию корень /),
   TP_TLS_DOMAIN, TP_TLS_CERT_FILE, TP_TLS_KEY_FILE, TP_TLS_CACHE_DIR,
   TP_OPEN_FIREWALL=yes|no (отдельное явное согласие; --yes недостаточно)
 
@@ -259,6 +276,7 @@ Variables for --yes (they pre-fill defaults in interactive mode):
   TP_TELEMT_SERVICE, TP_SUBPAGE=yes|no, TP_RUN_AS=user|root, TP_DATA_DIR,
   TP_VARIANT=full|lite, TP_STORE_DRIVER=sqlite|memory
   TP_TLS_MODE=acme|certificate|proxy|http (--yes defaults to http),
+  TP_BASE_PATH=/|/custom-path|random (proxy only; defaults to root /),
   TP_TLS_DOMAIN, TP_TLS_CERT_FILE, TP_TLS_KEY_FILE, TP_TLS_CACHE_DIR,
   TP_OPEN_FIREWALL=yes|no (separate explicit consent; --yes is insufficient)
 
@@ -963,14 +981,14 @@ port_in_use() {
   fi
 }
 
-# health_url LISTEN — loopback URL for the panel's /api/health.
+# health_url LISTEN [BASE_PATH] — local URL for the panel's health endpoint.
 health_url() {
   host_port_split "$1" || return 1
   case "$SPLIT_HOST" in
     ''|0.0.0.0|'[::]'|'::') _h="127.0.0.1" ;;
     *) _h="$SPLIT_HOST" ;;
   esac
-  printf 'http://%s:%s/api/health' "$_h" "$SPLIT_PORT"
+  printf 'http://%s:%s%s/api/health' "$_h" "$SPLIT_PORT" "${2:-}"
 }
 
 # host_addresses — one IPv4 per line for the "open in browser" hint.
@@ -1225,7 +1243,7 @@ gen_config() {
   esac
   if [ "$L" = "ru" ]; then
     _c_top="# Параметры запуска панели. Настройки интерфейса хранятся отдельно в panel-state.json."
-    _c_listen="# Адрес панели. За reverse proxy на подпути добавьте base_path = \"/panel\"."
+    _c_listen="# Адрес панели и префикс URL. Reverse proxy должен сохранять префикс."
     _c_data="# Каталог состояния (сессии, журнал обновлений). Пусто — только RAM."
     _c_telemt="# Telemt HTTP API: [server.api] в конфиге Telemt."
     _c_auth="# Хеш пароля: telemt-panel hash-password"
@@ -1235,7 +1253,7 @@ gen_config() {
     _c_priv="# sudo — узкая политика в $SUDOERS_FILE; direct — панель работает от root."
   else
     _c_top="# Panel startup parameters. UI settings are stored separately in panel-state.json."
-    _c_listen="# Panel address. Behind a reverse proxy on a sub-path add base_path = \"/panel\"."
+    _c_listen="# Panel address and URL prefix. A reverse proxy must preserve the prefix."
     _c_data="# State directory (sessions, update journal). Empty keeps state in RAM only."
     _c_telemt="# Telemt HTTP API: [server.api] in the Telemt config."
     _c_auth="# Password hash: telemt-panel hash-password"
@@ -1250,6 +1268,7 @@ $_c_top
 
 $_c_listen
 listen = "$(toml_escape "$LISTEN")"
+base_path = "$(toml_escape "$BASE_PATH")"
 
 $_c_data
 data_dir = "$(toml_escape "$DATA_DIR")"
@@ -1600,6 +1619,45 @@ tls_domain_ok() {
     } }'
 }
 
+# Normalize the installer's path subset before embedding it in TOML or proxy
+# examples. The panel validates the generated config again before installation.
+normalize_proxy_path() {
+  _path="$1"
+  case "$_path" in *[!A-Za-z0-9._~/-]*) return 1 ;; esac
+  case "$_path" in ''|/*) ;; *) _path="/$_path" ;; esac
+  while [ "${_path%/}" != "$_path" ]; do _path=${_path%/}; done
+  case "$_path/" in *//*|*/./*|*/../*) return 1 ;; esac
+  BASE_PATH="$_path"
+}
+
+ask_proxy_path() {
+  case "${TP_BASE_PATH:-/}" in
+    /) _path_default=1 ;;
+    random) _path_default=3 ;;
+    *) _path_default=2 ;;
+  esac
+  ask_choice _path_choice q_proxy_path_mode "$_path_default" "1 2 3"
+  # shellcheck disable=SC2154  # assigned indirectly by ask_choice
+  case "$_path_choice" in
+    1) BASE_PATH="" ;;
+    2)
+      _custom_default=${TP_BASE_PATH:-/panel}
+      case "$_custom_default" in /|random) _custom_default=/panel ;; esac
+      while :; do
+        ask _custom_path q_proxy_path "$_custom_default"
+        # shellcheck disable=SC2154  # assigned indirectly by ask
+        if normalize_proxy_path "$_custom_path"; then break; fi
+        [ "$ASSUME_YES" = 0 ] || die "$(t bad_proxy_path)"
+        warn "$(t bad_proxy_path)"
+      done ;;
+    3)
+      _path_secret=$(gen_secret) || die "$(t bad_proxy_path)"
+      BASE_PATH="/$(printf '%s' "$_path_secret" | cut -c 1-24)"
+      [ "${#BASE_PATH}" = 25 ] || die "$(t bad_proxy_path)" ;;
+  esac
+  kv "$(t s_base_path)" "${BASE_PATH:-/}"
+}
+
 ask_transport() {
   _default=1
   _transport="${TP_TLS_MODE:-}"
@@ -1610,6 +1668,7 @@ ask_transport() {
   esac
   ask_choice _tls_choice q_transport "$_default" "1 2 3 4"
   TLS_DOMAIN=""; TLS_CERT=""; TLS_KEY=""; TLS_CACHE=""
+  BASE_PATH=""; BEHIND_PROXY=0
   # shellcheck disable=SC2154
   case "$_tls_choice" in
     1)
@@ -1624,9 +1683,10 @@ ask_transport() {
       ask TLS_CERT q_tls_cert "${TP_TLS_CERT_FILE:-}"
       ask TLS_KEY q_tls_key "${TP_TLS_KEY_FILE:-}"
       if [ ! -r "$TLS_CERT" ] || [ ! -r "$TLS_KEY" ]; then die "$(t tls_cert_unreadable)"; fi ;;
-    3) TLS_MODE=http; LISTEN="127.0.0.1:8080"; explain tls_proxy_notice ;;
+    3) TLS_MODE=http; LISTEN="127.0.0.1:8080"; BEHIND_PROXY=1; explain tls_proxy_notice; ask_proxy_path ;;
     4) TLS_MODE=http; LISTEN="0.0.0.0:8080"; warn "$(t tls_http_notice)" ;;
   esac
+  if [ "$BEHIND_PROXY" = 0 ] && [ -n "${TP_BASE_PATH:-}" ]; then die "$(t proxy_path_env)"; fi
 }
 
 needs_bind_capability() {
@@ -1781,6 +1841,7 @@ print_summary() {
   kv "$(t s_variant)" "$BUILD_VARIANT"
   kv "$(t s_storage)" "$STORE_DRIVER"
   kv "$(t s_listen)" "$LISTEN"
+  kv "$(t s_base_path)" "${BASE_PATH:-/}"
   kv "$(t s_tls)" "$TLS_MODE${TLS_DOMAIN:+: $TLS_DOMAIN}"
   kv "$(t s_admin)" "$ADMIN_USER"
   kv "$(t s_telemt_url)" "$TELEMT_URL"
@@ -2314,7 +2375,7 @@ start_service() {
     ok "$(t a_health_ok HTTPS)"
     return 0
   fi
-  _url=$(health_url "$LISTEN") || return 0
+  _url=$(health_url "$LISTEN" "$BASE_PATH") || return 0
   _i=0
   while [ "$_i" -lt "$HEALTH_WAIT_SECONDS" ]; do
     if [ "$(http_get "$_url")" = 200 ]; then
@@ -2328,10 +2389,43 @@ start_service() {
   return 1
 }
 
+print_proxy_example() {
+  _upstream=${LISTEN}
+  case "$_upstream" in :*|0.0.0.0:*|'[::]:'*) _upstream="127.0.0.1:${LISTEN##*:}" ;; esac
+  say "$(t proxy_config_hint)"
+  printf '\n    https://panel.example.com%s/\n\n' "$BASE_PATH"
+  say "$(t proxy_nginx_context)"
+  if [ -n "$BASE_PATH" ]; then
+    printf 'location = %s { return 308 %s/; }\n' "$BASE_PATH" "$BASE_PATH"
+  fi
+  cat <<EOF
+location ^~ $BASE_PATH/ {
+    proxy_pass http://$_upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_buffering off;
+    proxy_set_header Host \$http_host;
+    proxy_set_header X-Forwarded-For \$remote_addr;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+}
+
+Caddy:
+panel.example.com {
+EOF
+  if [ -n "$BASE_PATH" ]; then
+    printf '    redir %s %s/ 308\n    handle %s/* {\n' "$BASE_PATH" "$BASE_PATH" "$BASE_PATH"
+  else
+    printf '    handle {\n'
+  fi
+  printf '        reverse_proxy %s\n    }\n}\n' "$_upstream"
+}
+
 print_done() {
   host_port_split "$LISTEN" || return 0
   say "$(t done_open)"
-  if [ "$TLS_MODE" = acme ]; then
+  if [ "$BEHIND_PROXY" = 1 ]; then
+    print_proxy_example
+  elif [ "$TLS_MODE" = acme ]; then
     printf '    %shttps://%s:%s%s\n' "$C_CYAN" "$TLS_DOMAIN" "$SPLIT_PORT" "$C_RESET"
   elif [ "$TLS_MODE" = certificate ]; then
     printf '    %shttps://<certificate-domain>:%s%s\n' "$C_CYAN" "$SPLIT_PORT" "$C_RESET"

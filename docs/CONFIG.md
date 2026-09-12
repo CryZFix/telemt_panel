@@ -232,16 +232,31 @@ telemt-panel tls check --config /etc/telemt-panel/config.toml --timeout 120s
 
 ### За nginx или Caddy
 
-В панели используйте `listen = "127.0.0.1:8080"`, `base_path = "/panel"`,
-`trusted_proxies = ["127.0.0.1/32"]` и `[tls] mode = "http"`.
+Для размещения по адресу `https://example.com/panel/`:
+
+```toml
+listen = "127.0.0.1:8080"
+base_path = "/panel"
+trusted_proxies = ["127.0.0.1/32"]
+
+[tls]
+mode = "http"
+```
+
+`base_path` задаётся в корне TOML, до `[tls]` и других таблиц. Для корня домена
+используйте `base_path = ""`. `public_url` не обязателен для загрузки интерфейса
+и входа: он не заменяет согласование пути в панели и прокси. Если указан полный
+`public_url` с путём, панель использует этот путь как `base_path`.
 Внешний HTTPS обслуживает прокси, внутренний HTTP остаётся на loopback.
 
 nginx, внутри HTTPS server:
 
 ```nginx
-location = /panel { return 301 /panel/; }
-location /panel/ {
+location = /panel { return 308 /panel/; }
+location ^~ /panel/ {
     proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
     proxy_buffering off;
     proxy_set_header Host $http_host;
     proxy_set_header X-Forwarded-For $remote_addr;
@@ -264,6 +279,8 @@ panel.example.com {
 панель возвращает 404 без перенаправления. Не используйте Caddy `handle_path`
 или завершающий `/` в nginx `proxy_pass`, удаляющие префикс.
 Путь не заменяет авторизацию панели или персональный токен подписки.
+При размещении в корне домена уберите перенаправление и используйте
+`location /` в nginx либо `handle` без пути в Caddy.
 
 Пример независимой подписки за Caddy:
 

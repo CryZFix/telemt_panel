@@ -103,7 +103,7 @@ export const ru = {
   },
   nav: {
     overview: "Сводка",
-    people: "Люди",
+    people: "Пользователи",
     pulse: "Пульс",
     journal: "Журнал",
     server: "Сервер",
@@ -136,7 +136,7 @@ export const ru = {
     placeholderDescription: "Экран появится в одной из следующих задач.",
   },
   people: {
-    title: "Люди",
+    title: "Пользователи",
     accessManagement: "Управление доступом",
     tableUser: "Пользователь",
     tableNow: "Сейчас",
@@ -436,8 +436,8 @@ export const ru = {
     allUsers: "Все пользователи",
     topUsers: "Наибольшая текущая нагрузка",
     sortedByConnections: "По текущим соединениям",
-    // Кнопка в шапке «Квоты и сроки» — тем же словом, что и вкладка «Люди».
-    allPeople: "Все люди",
+    // Keep the quota-widget link consistent with the users navigation label.
+    allPeople: "Все пользователи",
     // Строка человека: «13 соединений · 3 IP · 19 ГБ».
     onlineConnections: ["{n} соединение", "{n} соединения", "{n} соединений"],
     // Две колонки на десктопе: строка стала вдвое уже, и «соединений»
@@ -1129,7 +1129,8 @@ export const ru = {
           verdictUnknown: "Ожидаем условия доступа",
           verdictOpenDescription: "Нет whitelist и auth header, при этом API разрешает изменения.",
           verdictTlsDescription:
-            "{count} наблюдений отмечены как некорректные или похожие на сканирование.",
+            "Подозрительных TLS-наблюдений в полученных данных: {count}. Само по себе это не означает сбой сервиса или взлом.",
+          reviewTls: "Показать подозрительные TLS-наблюдения",
           verdictRestrictedDescription:
             "Whitelist ограничивает обращения к API; изменения разрешены после прохождения сетевого фильтра.",
           verdictUnknownDescription: "Оценка уточнится после получения всех условий доступа.",
@@ -1145,7 +1146,7 @@ export const ru = {
           changesDenied: "изменения запрещены",
           changesAvailable: "управляющие операции доступны",
           tlsSignals: "TLS-сигналы",
-          badOrProbe: "некорректные / сканы",
+          badOrProbe: "подозрительные наблюдения",
           captureWindow: "в текущем окне захвата",
           requestPath: "Путь запроса",
           apiProtection: "Как защищён управляющий API",
@@ -1183,6 +1184,13 @@ export const ru = {
           retention: "retention · {value}",
           observations: "Наблюдений",
           fourDimensions: "одно окно, четыре измерения",
+          aggregateHint: "Telemt возвращает агрегаты, а не отдельные события: до {limit} записей в каждом измерении. Счётчик — сумма bad_or_probe в полученных отпечатках, не число уникальных IP. Рейтинги ограничены и могут отличаться; ошибка разбора ClientHello учитывается отдельно.",
+          suspiciousOnly: "Только подозрительные (bad_or_probe > 0)",
+          sortedBySignals: "Сортировка: подозрительные ↓",
+          totalObserved: "Всего: {count}",
+          noSuspiciousMatches: "В полученных данных для этого измерения совпадений нет. Проверьте поиск, выберите отпечатки или другое измерение: не все наблюдения доступны по IP или пользователю.",
+          firstSeen: "Впервые",
+          lastSeen: "Последнее наблюдение",
           parseErrors: "Ошибки разбора",
           evicted: "Вытеснено",
           bufferCapacity: "буфер {count} записей",
@@ -2520,7 +2528,7 @@ export const ru = {
       filters: {
         all: "Все",
         session: "Сессии",
-        person: "Люди",
+        person: "Пользователи",
         access: "Доступ",
         config: "Настройки",
         update: "Обновления",
@@ -2852,10 +2860,10 @@ export const ru = {
         webDecoyHttp: "HTTP upstream",
         webDecoyStatic: "Статический каталог",
         webProfilesTitle: "Профили доступа",
-        webProfilesHint: "Профили привязаны к пользователям и управляются в разделе «Люди».",
+        webProfilesHint: "Профили привязаны к пользователям и управляются в разделе «Пользователи».",
         webProfilesManagedInPeople:
           "Назначение и ограничения профилей редактируются в карточке пользователя.",
-        webManageProfiles: "Открыть «Люди»",
+        webManageProfiles: "Открыть «Пользователи»",
         webNoAccessUsers:
           "Создайте хотя бы одного пользователя доступа, прежде чем добавлять WEB-профиль.",
         webNoProfiles: "У этого виртуального хоста нет профилей доступа.",

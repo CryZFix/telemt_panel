@@ -5,8 +5,8 @@ import { geoipEn } from "./geoip.en";
 // a key added there is a compile error here until it is translated, and a
 // key that exists only here is rejected by the excess-property check.
 //
-// Terminology is fixed on purpose (see design-d3-report.md's table): Люди →
-// People, Пульс → Pulse, Журнал → Journal, Сервер → Server, Инспектор →
+// Account terminology is Users throughout the interface. Other fixed terms:
+// Пульс → Pulse, Журнал → Journal, Сервер → Server, Инспектор →
 // Inspector, Проблемы → Issues, Настроить → Customize, Перевыпустить →
 // Reissue, Белый список → Allowlist. Telemt's own identifiers (config keys,
 // ME, DC, Fake-TLS, hardswap, PROXY protocol) are never translated.
@@ -85,7 +85,7 @@ export const en: Dict = {
   },
   nav: {
     overview: "Overview",
-    people: "People",
+    people: "Users",
     pulse: "Pulse",
     journal: "Journal",
     server: "Server",
@@ -112,7 +112,7 @@ export const en: Dict = {
     placeholderDescription: "This screen arrives in one of the next tasks.",
   },
   people: {
-    title: "People",
+    title: "Users",
     accessManagement: "Access management",
     tableUser: "User",
     tableNow: "Now",
@@ -396,7 +396,7 @@ export const en: Dict = {
     allUsers: "All users",
     topUsers: "Highest current load",
     sortedByConnections: "By current connections",
-    allPeople: "All people",
+    allPeople: "All users",
     onlineConnections: ["{n} connection", "{n} connections", "{n} connections"],
     onlineConnectionsShort: "{n} conn.",
     clients: {
@@ -994,7 +994,8 @@ export const en: Dict = {
           verdictUnknown: "Waiting for access conditions",
           verdictOpenDescription:
             "Neither whitelist nor auth header is enabled while the API accepts writes.",
-          verdictTlsDescription: "{count} observations are malformed or resemble scanning.",
+          verdictTlsDescription: "Suspicious TLS observations in the returned data: {count}. This alone does not indicate a service failure or compromise.",
+          reviewTls: "Show suspicious TLS observations",
           verdictRestrictedDescription:
             "The whitelist limits API access; writes are allowed only after the network filter.",
           verdictUnknownDescription:
@@ -1011,7 +1012,7 @@ export const en: Dict = {
           changesDenied: "changes are denied",
           changesAvailable: "management operations are available",
           tlsSignals: "TLS signals",
-          badOrProbe: "malformed / scans",
+          badOrProbe: "suspicious observations",
           captureWindow: "in the current capture window",
           requestPath: "Request path",
           apiProtection: "How the management API is protected",
@@ -1049,6 +1050,13 @@ export const en: Dict = {
           retention: "retention · {value}",
           observations: "Observations",
           fourDimensions: "one window, four dimensions",
+          aggregateHint: "Telemt returns aggregates, not individual events: up to {limit} rows per dimension. The count sums bad_or_probe in the returned fingerprints, not unique IPs. Rankings are capped and may differ; ClientHello parse errors are counted separately.",
+          suspiciousOnly: "Suspicious only (bad_or_probe > 0)",
+          sortedBySignals: "Sorted by suspicious observations ↓",
+          totalObserved: "Total: {count}",
+          noSuspiciousMatches: "No matching rows in the returned data for this dimension. Check the search, select fingerprints or another dimension: not every observation is available by IP or user.",
+          firstSeen: "First seen",
+          lastSeen: "Last seen",
           parseErrors: "Parse errors",
           evicted: "Evicted",
           bufferCapacity: "buffer capacity {count}",
@@ -2331,7 +2339,7 @@ export const en: Dict = {
       filters: {
         all: "All",
         session: "Sessions",
-        person: "People",
+        person: "Users",
         access: "Access",
         config: "Settings",
         update: "Updates",
@@ -2646,9 +2654,9 @@ export const en: Dict = {
         webDecoyHttp: "HTTP upstream",
         webDecoyStatic: "Static directory",
         webProfilesTitle: "Access profiles",
-        webProfilesHint: "Profiles belong to users and are managed under People.",
+        webProfilesHint: "Profiles belong to users and are managed under Users.",
         webProfilesManagedInPeople: "Profile assignment and limits are edited in the user's card.",
-        webManageProfiles: "Open People",
+        webManageProfiles: "Open Users",
         webNoAccessUsers: "Create at least one access user before adding a WEB profile.",
         webNoProfiles: "This virtual host has no access profiles.",
         webNewProfile: "New access profile",

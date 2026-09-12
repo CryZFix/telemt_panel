@@ -124,7 +124,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <button
             type="button"
             className={cn(
-              "tap-target flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-semibold",
+              "tap-target flex flex-auto flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-semibold",
               managementActive || mobileMoreOpen ? "text-accent" : "text-text-faint",
             )}
             aria-label={s.nav.more}
@@ -263,7 +263,7 @@ function BottomLink({ item, active }: { item: NavItem; active: boolean }) {
     <Link
       to={to}
       className={cn(
-        "tap-target flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-semibold",
+        "tap-target flex flex-auto flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-semibold",
         active ? "text-accent" : "text-text-faint",
       )}
       aria-current={active ? "page" : undefined}

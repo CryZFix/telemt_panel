@@ -50,15 +50,23 @@ export function filterTlsRows(
   rows: readonly TlsFingerprintRow[],
   scope: SecurityTlsScope,
   query: string,
+  suspiciousOnly = false,
 ): TlsFingerprintRow[] {
   const needle = query.trim().toLocaleLowerCase();
   return [...rows]
     .filter((row) => {
+      if (suspiciousOnly && row.bad_or_probe <= 0) return false;
       if (!needle) return true;
       return [row.scope, row.ja3, row.ja3_raw, row.ja4, row.ja4_raw]
         .filter((value): value is string => Boolean(value))
         .some((value) => value.toLocaleLowerCase().includes(needle));
     })
-    .sort((a, b) => b.total - a.total || b.last_seen_epoch_secs - a.last_seen_epoch_secs)
+    .sort((a, b) => (suspiciousOnly ? b.bad_or_probe - a.bad_or_probe : 0) || b.total - a.total || b.last_seen_epoch_secs - a.last_seen_epoch_secs)
     .map((row) => ({ ...row, scope: scope === "by_fingerprint" ? undefined : row.scope }));
+}
+
+export function tlsSeenAt(s: Dict, seconds: number): string {
+  const date = new Date(seconds * 1000);
+  if (seconds <= 0 || !Number.isFinite(date.getTime())) return "—";
+  return date.toLocaleString(s.locale, { dateStyle: "short", timeStyle: "medium" });
 }

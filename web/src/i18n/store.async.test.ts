@@ -30,7 +30,7 @@ describe("asynchronous locale changes", () => {
     expect(store.getLocaleLoadState().pending).toBe("ru");
     next.resolve(ru);
     expect(await initialized).toBe(true);
-    expect(store.getStrings().nav.people).toBe("Люди");
+    expect(store.getStrings().nav.people).toBe("Пользователи");
     expect(store.isLocaleReady()).toBe(true);
     expect(load.mock.calls).toEqual([["ru"]]);
   });

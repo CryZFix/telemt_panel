@@ -55,6 +55,19 @@ function deepKeys(value: unknown, prefix = ""): string[] {
 }
 
 describe("dictionary shape parity", () => {
+  it.each(DICTS)("%s uses one user-account term throughout the interface", (locale, dict) => {
+    const title = locale === "ru" ? "Пользователи" : "Users";
+    expect(dict.nav.people).toBe(title);
+    expect(dict.people.title).toBe(title);
+    expect(dict.overview.allPeople).toBe(dict.overview.allUsers);
+    const texts = (value: unknown): string[] => {
+      if (typeof value === "string") return [value];
+      if (value && typeof value === "object") return Object.values(value).flatMap(texts);
+      return [];
+    };
+    expect(texts(dict).filter((value) => /Люди|Все люди|\bPeople\b|\bAll people\b/.test(value))).toEqual([]);
+  });
+
   // The type system already enforces this (en.ts is typed `Dict`, and Dict
   // comes from `typeof ru`) — this asserts it at runtime too, because the
   // one thing types cannot catch is a key that exists in both but got typed

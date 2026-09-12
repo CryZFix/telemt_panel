@@ -18,4 +18,12 @@ describe("diagnostic URL search validation", () => {
   it("caps values before they enter browser history", () => {
     expect(validateDetailSearch({ entity: "x".repeat(1000) }).entity).toHaveLength(256);
   });
+
+  it("keeps a TLS drill-down link without accepting arbitrary filter values", () => {
+    expect(validateDetailSearch({ tab: "tls", tlsScope: "by_ip", tlsFilter: "suspicious" })).toEqual({ tab: "tls", tlsScope: "by_ip", tlsFilter: "suspicious" });
+    expect(validateDetailSearch({ tlsScope: "unknown", tlsFilter: ["suspicious"] })).toEqual({});
+    for (const tlsScope of ["by_fingerprint", "by_ip", "by_cidr", "by_user"]) {
+      expect(validateDetailSearch({ tlsScope })).toEqual({ tlsScope });
+    }
+  });
 });

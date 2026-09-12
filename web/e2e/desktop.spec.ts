@@ -148,7 +148,7 @@ test("grouped sidebar navigates, and the TOML config editor (CodeMirror) mounts"
   // margin instead of racing the second observation at exactly 30 seconds.
   await expect(traffic).toHaveText(/\d/, { timeout: 45_000 });
   // Four operational sections followed by two management sections.
-  for (const section of ["Сводка", "Люди", "Пульс", "Журнал", "Сервер", "WEB"]) {
+  for (const section of ["Сводка", "Пользователи", "Пульс", "Журнал", "Сервер", "WEB"]) {
     await expect(sidebar.getByRole("link", { name: section })).toBeVisible();
   }
 

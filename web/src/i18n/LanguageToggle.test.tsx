@@ -62,10 +62,10 @@ describe("LanguageToggle", () => {
         <Bystander />
       </>,
     );
-    expect(container.querySelector("p")!.textContent).toBe("Люди");
+    expect(container.querySelector("p")!.textContent).toBe("Пользователи");
 
     act(() => chips(container)[1]!.click());
-    expect(container.querySelector("p")!.textContent).toBe("People");
+    expect(container.querySelector("p")!.textContent).toBe("Users");
     // Its own labels follow too — no mixed screen, not even for the
     // control that did the switching.
     expect(chips(container).map((b) => b.textContent)).toEqual(["Русский", "English", "Browser"]);

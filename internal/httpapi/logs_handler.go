@@ -38,14 +38,23 @@ type apiLogLine struct {
 	Msg   string    `json:"msg"`
 }
 
-func toAPILogLine(l host.LogLine) apiLogLine {
+func toAPILogLine(l host.LogLine, logical string) apiLogLine {
+	l.Msg = stripLogControls(l.Msg)
+	if logical == "telemt" {
+		if ts, level, ok := telemtLogPrefix(l.Msg); ok {
+			l.Level = level
+			if l.TS.IsZero() {
+				l.TS = ts
+			}
+		}
+	}
 	return apiLogLine{TS: l.TS, Level: l.Level, Unit: l.Unit, Msg: l.Msg}
 }
 
-func toAPILogLines(in []host.LogLine) []apiLogLine {
+func toAPILogLines(in []host.LogLine, logical string) []apiLogLine {
 	out := make([]apiLogLine, len(in))
 	for i, l := range in {
-		out[i] = toAPILogLine(l)
+		out[i] = toAPILogLine(l, logical)
 	}
 	return out
 }
@@ -83,13 +92,13 @@ func (s *Server) handleLogsTail(w http.ResponseWriter, r *http.Request) {
 		auth.WriteError(w, http.StatusBadGateway, "log_source_error", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, toAPILogLines(result))
+	writeJSON(w, http.StatusOK, toAPILogLines(result, logical))
 }
 
 // writeLogSSEEvent renders one host.LogLine as an SSE frame: `event: log`
 // + JSON data, matching openapi streamLogs.
-func writeLogSSEEvent(w io.Writer, l host.LogLine) error {
-	payload, err := json.Marshal(toAPILogLine(l))
+func writeLogSSEEvent(w io.Writer, l host.LogLine, logical string) error {
+	payload, err := json.Marshal(toAPILogLine(l, logical))
 	if err != nil {
 		return err
 	}
@@ -152,7 +161,7 @@ func (s *Server) handleEventsLogs(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			extendSSEWriteDeadline(rc)
-			if err := writeLogSSEEvent(w, line); err != nil {
+			if err := writeLogSSEEvent(w, line, logical); err != nil {
 				return
 			}
 			flusher.Flush()

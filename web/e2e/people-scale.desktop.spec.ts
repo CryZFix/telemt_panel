@@ -108,7 +108,7 @@ test("2000 users keep bounded rows, navigation and fresh data after reconnect", 
     await page.getByTestId("hub-card-counters").click();
     await expect(page).toHaveURL(/\/pulse\/diag\/counters$/);
     await expect.poll(() => activeStreams.size).toBe(1);
-    await page.getByRole("link", { name: "Люди", exact: true }).click();
+    await page.getByRole("link", { name: "Пользователи", exact: true }).click();
     await expect(all).toContainText("2001");
     await search.fill("scale-1999");
     await expect(last).toBeVisible();
@@ -127,7 +127,7 @@ test("2000 users keep bounded rows, navigation and fresh data after reconnect", 
       // Wait for the debounced topic change before navigating back; otherwise
       // both transitions legitimately coalesce to the original subscription.
       await expect.poll(() => failedStreams, { timeout: 10000 }).toBeGreaterThan(failuresBefore);
-      await page.getByRole("link", { name: "Люди", exact: true }).click();
+      await page.getByRole("link", { name: "Пользователи", exact: true }).click();
       await expect(page).toHaveURL(/\/people$/);
       await expect.poll(() => activeStreams.size, { timeout: 10000 }).toBe(0);
       await expect(last).toBeVisible();

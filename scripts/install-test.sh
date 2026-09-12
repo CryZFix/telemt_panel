@@ -107,6 +107,78 @@ if host_port_split "nonsense"; then fail "split accepts nonsense"; else pass; fi
 assert_eq "health url any" "http://127.0.0.1:8080/api/health" "$(health_url 0.0.0.0:8080)"
 assert_eq "health url ipv6 any" "http://127.0.0.1:81/api/health" "$(health_url '[::]:81')"
 assert_eq "health url explicit" "http://10.0.0.5:8080/api/health" "$(health_url 10.0.0.5:8080)"
+assert_eq "health url prefix" "http://127.0.0.1:8080/private/panel/api/health" "$(health_url 127.0.0.1:8080 /private/panel)"
+assert_eq "health url ipv6 prefix" "http://[::1]:8080/panel/api/health" "$(health_url '[::1]:8080' /panel)"
+
+# Proxy path selection must agree with the panel's generated root-level config.
+for _path in /panel panel /private/panel /panel/ /a._~-9; do
+  if normalize_proxy_path "$_path"; then pass; else fail "valid path rejected $_path"; fi
+done
+normalize_proxy_path panel/
+assert_eq "path normalized" /panel "$BASE_PATH"
+for _path in '/a//b' '/a/../b' '/.' '/..' '/a/.' '/a/..' 'https://example.com' '/a?b' '/a#b' '/a b' '/a%2fb' '/панель' '/a;return' '/a$host' '/a{b'; do
+  if normalize_proxy_path "$_path"; then fail "unsafe path accepted $_path"; else pass; fi
+done
+normalize_proxy_path /
+assert_eq "root stored empty" '' "$BASE_PATH"
+(
+  TP_TLS_MODE=proxy; unset TP_BASE_PATH
+  ask_transport >/dev/null
+  printf '%s|%s|%s\n' "$BEHIND_PROXY" "$BASE_PATH" "$LISTEN"
+) >"$TMP/proxy-root"
+assert_eq "proxy defaults to root" '1||127.0.0.1:8080' "$(cat "$TMP/proxy-root")"
+(
+  TP_TLS_MODE=proxy; TP_BASE_PATH=/private/panel/
+  ask_transport >/dev/null
+  gen_config
+) >"$TMP/proxy-custom.toml"
+assert_eq "proxy config root base_path" /private/panel "$(toml_value "$TMP/proxy-custom.toml" '' base_path)"
+assert_eq "no base_path in tls table" '' "$(toml_value "$TMP/proxy-custom.toml" tls base_path)"
+(
+  TP_TLS_MODE=proxy; TP_BASE_PATH=random
+  ask_transport >/dev/null
+  printf '%s\n' "$BASE_PATH"
+) >"$TMP/proxy-random"
+if grep -Eq '^/[0-9a-f]{24}$' "$TMP/proxy-random"; then pass; else fail "random path format"; fi
+if (TP_TLS_MODE=proxy; TP_BASE_PATH='/../x'; ask_transport) >/dev/null 2>&1; then fail "invalid unattended path accepted"; else pass; fi
+if (TP_TLS_MODE=http; TP_BASE_PATH=/panel; ask_transport) >/dev/null 2>&1; then fail "path silently ignored outside proxy mode"; else pass; fi
+(
+  ASSUME_YES=0
+  read_tty() {
+    case "$PROXY_INPUT" in
+      0) _val=2 ;; 1) _val='/bad path' ;; 2) _val='/chosen' ;;
+    esac
+    PROXY_INPUT=$((PROXY_INPUT + 1))
+  }
+  PROXY_INPUT=0
+  ask_proxy_path >/dev/null
+  printf '%s\n' "$BASE_PATH"
+) >"$TMP/proxy-retry" 2>/dev/null
+assert_eq "invalid interactive path can be corrected" /chosen "$(cat "$TMP/proxy-retry")"
+(
+  LISTEN=127.0.0.1:8080; BASE_PATH=/private/panel
+  print_proxy_example
+) >"$TMP/proxy-example"
+assert_contains "nginx exact redirect" 'location = /private/panel { return 308 /private/panel/; }' "$TMP/proxy-example"
+assert_contains "nginx prefix preserved" 'proxy_pass http://127.0.0.1:8080;' "$TMP/proxy-example"
+assert_contains "nginx streams events" 'proxy_buffering off;' "$TMP/proxy-example"
+assert_contains "caddy prefix preserved" 'handle /private/panel/* {' "$TMP/proxy-example"
+assert_not_contains "no caddy path stripping" 'handle_path' "$TMP/proxy-example"
+(
+  LISTEN=127.0.0.1:8080; BASE_PATH=''
+  print_proxy_example
+) >"$TMP/proxy-example-root"
+assert_contains "nginx root" 'location ^~ / {' "$TMP/proxy-example-root"
+assert_not_contains "no root redirect loop" 'return 308' "$TMP/proxy-example-root"
+if (
+  LISTEN=127.0.0.1:8080; BASE_PATH=/panel; NO_START=0; DRY_RUN=0; TLS_MODE=http
+  cmd_restart() { printf 'true'; }
+  run() { return 0; }
+  http_get() { if [ "$1" = http://127.0.0.1:8080/panel/api/health ]; then printf 200; else printf 404; fi; }
+  HEALTH_WAIT_SECONDS=1
+  start_service
+) >"$TMP/proxy-health" 2>&1; then pass; else fail "prefixed service health probe failed"; fi
+BASE_PATH=''
 
 # ── mask ─────────────────────────────────────────────────────────────────────
 assert_eq "mask short" "***" "$(mask abc)"

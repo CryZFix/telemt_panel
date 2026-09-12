@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useMemo, useRef, useState, type RefObject } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Button } from "../../ui/Button";
 import { fill, formatNumber, useStrings, type Dict } from "../../i18n";
 import type { TlsFingerprintRow, TlsFingerprints } from "../../lib/api/generated/types.gen";
 import { cn } from "../../lib/cn";
@@ -28,6 +29,7 @@ import {
   tlsRowIdentity,
   tlsRowSecondary,
   tlsTotals,
+  tlsSeenAt,
   type SecurityLevel,
   type SecurityTlsScope,
 } from "./security.view.helpers";
@@ -36,14 +38,14 @@ type SecurityTab = "posture" | "tls" | "limits";
 
 const levelStyles: Record<SecurityLevel, { border: string; mark: string; text: string }> = {
   ok: {
-    border: "border-success/35",
-    mark: "border-success/35 bg-gradient-to-br from-success/30 to-success/10 text-success-text",
-    text: "text-success-text",
+    border: "border-ok/35",
+    mark: "border-ok/35 bg-gradient-to-br from-ok/30 to-ok/10 text-ok",
+    text: "text-ok",
   },
   warn: {
-    border: "border-warning/40",
-    mark: "border-warning/45 bg-gradient-to-br from-warning/30 to-warning/10 text-warning-text",
-    text: "text-warning-text",
+    border: "border-warn/40",
+    mark: "border-warn/45 bg-gradient-to-br from-warn/30 to-warn/10 text-warn",
+    text: "text-warn",
   },
   error: {
     border: "border-error/45",
@@ -73,9 +75,11 @@ function SectionHead({ kicker, title, meta }: { kicker: string; title: string; m
 function SecurityHero({
   posture,
   tls,
+  onReview,
 }: {
   posture: SecurityPosture | null | undefined;
   tls: TlsFingerprints | undefined;
+  onReview: () => void;
 }) {
   const s = useStrings();
   const v = s.details.pages.security.view;
@@ -133,6 +137,11 @@ function SecurityHero({
           <span className={cn("mt-2 block text-micro font-semibold", levelStyles[level].text)}>
             {level === "ok" ? v.conditionsMet : v.attentionRequired}
           </span>
+          {(totals.bad ?? 0) > 0 && (
+            <Button variant="secondary" className="mt-3" onClick={onReview} aria-label={v.reviewTls}>
+              {s.pulse.diagLink}
+            </Button>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-px bg-border lg:grid-cols-4">
@@ -190,7 +199,7 @@ function HeroVital({
     <div
       className={cn(
         "min-w-0 bg-surface px-4 py-4",
-        tone === "warn" && "bg-warning/5",
+        tone === "warn" && "bg-warn/5",
         tone === "error" && "bg-error/5",
       )}
     >
@@ -198,7 +207,7 @@ function HeroVital({
       <strong
         className={cn(
           "mt-1 block break-words text-lg font-bold tabular-nums text-text",
-          tone === "warn" && "text-warning-text",
+          tone === "warn" && "text-warn",
           tone === "error" && "text-error-text",
         )}
       >
@@ -313,7 +322,7 @@ function PosturePanel({
             entries.map((entry) => (
               <code
                 key={entry}
-                className="max-w-full break-all rounded-lg border border-success/20 bg-success/5 px-3 py-2 text-meta text-success-text"
+                className="max-w-full break-all rounded-lg border border-ok/20 bg-ok/5 px-3 py-2 text-meta text-ok"
               >
                 {entry}
               </code>
@@ -345,7 +354,7 @@ function AccessStep({
       className={cn(
         "min-h-28 rounded-xl border bg-surface p-3.5",
         levelStyles[tone].border,
-        tone !== "ok" && "bg-gradient-to-b from-warning/5 to-surface",
+        tone !== "ok" && "bg-gradient-to-b from-warn/5 to-surface",
       )}
     >
       <span
@@ -380,7 +389,7 @@ function PostureRow({
         <span className="block text-meta text-text">{label}</span>
         <small className="mt-0.5 block text-micro text-text-faint">{hint}</small>
       </div>
-      <strong className={cn("text-meta font-semibold text-text", warn && "text-warning-text")}>
+      <strong className={cn("text-meta font-semibold text-text", warn && "text-warn")}>
         {value}
       </strong>
     </div>
@@ -391,17 +400,26 @@ function TlsPanel({
   tls,
   source,
   onRetry,
+  scope,
+  suspiciousOnly,
+  onScopeChange,
+  onFilterChange,
+  resultsRef,
 }: {
   tls: TlsFingerprints | undefined;
   source: SourceState | undefined;
   onRetry: () => void;
+  scope: SecurityTlsScope;
+  suspiciousOnly: boolean;
+  onScopeChange: (scope: SecurityTlsScope) => void;
+  onFilterChange: (value: boolean) => void;
+  resultsRef: RefObject<HTMLHeadingElement | null>;
 }) {
   const s = useStrings();
   const v = s.details.pages.security.view;
-  const [scope, setScope] = useState<SecurityTlsScope>("by_fingerprint");
   const [query, setQuery] = useState("");
   const [visible, setVisible] = useState(5);
-  const rows = useMemo(() => filterTlsRows(tls?.[scope] ?? [], scope, query), [query, scope, tls]);
+  const rows = useMemo(() => filterTlsRows(tls?.[scope] ?? [], scope, query, suspiciousOnly), [query, scope, tls, suspiciousOnly]);
   const totals = tlsTotals(tls?.by_fingerprint);
   if (!tls) {
     if (source?.status === "disabled" || source?.status === "unsupported")
@@ -418,7 +436,7 @@ function TlsPanel({
       <SourceNotice kind={source?.status === "error" ? "error" : "loading"} onRetry={onRetry} />
     );
   }
-  const max = Math.max(...rows.map((row) => row.total), 1);
+  const max = Math.max(...rows.map((row) => suspiciousOnly ? row.bad_or_probe : row.total), 1);
   const scopes: Array<[SecurityTlsScope, string]> = [
     ["by_fingerprint", v.fingerprints],
     ["by_ip", "IP"],
@@ -432,6 +450,7 @@ function TlsPanel({
         title={v.captureState}
         meta={fill(v.retention, { value: duration(s, tls.retention_secs) })}
       />
+      <p className="mt-3 text-meta leading-relaxed text-text-muted">{fill(v.aggregateHint, { limit: formatNumber(s, tls.limit) })}</p>
       <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border lg:grid-cols-4">
         <CaptureStat
           label={v.observations}
@@ -466,7 +485,7 @@ function TlsPanel({
               role="tab"
               aria-selected={scope === id}
               onClick={() => {
-                setScope(id);
+                onScopeChange(id);
                 setVisible(5);
               }}
               className={cn(
@@ -497,16 +516,20 @@ function TlsPanel({
           />
         </label>
       </div>
+      <label className="mt-3 flex min-h-11 w-fit cursor-pointer items-center gap-2 text-meta text-text">
+        <input type="checkbox" checked={suspiciousOnly} onChange={(event) => { onFilterChange(event.target.checked); setVisible(5); }} className="h-4 w-4 accent-accent" />
+        {v.suspiciousOnly}
+      </label>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-2">
         <div>
           <span className="text-micro font-semibold uppercase tracking-[0.16em] text-text-faint">
             {v.ranking}
           </span>
-          <h3 className="mt-1 text-h2 font-semibold text-text">
+          <h3 ref={resultsRef} tabIndex={-1} className="mt-1 text-h2 font-semibold text-text focus-visible:outline-2 focus-visible:outline-accent">
             {scopes.find(([id]) => id === scope)?.[1]}
           </h3>
         </div>
-        <span className="text-meta text-text-muted">{v.sortedByTotal}</span>
+        <span className="text-meta text-text-muted">{suspiciousOnly ? v.sortedBySignals : v.sortedByTotal}</span>
       </div>
       <div className="mt-3 space-y-px overflow-hidden rounded-xl border border-border bg-border">
         {rows.slice(0, visible).map((row, index) => (
@@ -516,11 +539,12 @@ function TlsPanel({
             scope={scope}
             index={index}
             max={max}
+            suspiciousOnly={suspiciousOnly}
           />
         ))}
         {rows.length === 0 && (
           <div className="bg-surface px-4 py-10 text-center text-meta text-text-muted">
-            {v.noMatches}
+            {suspiciousOnly ? v.noSuspiciousMatches : v.noMatches}
           </div>
         )}
       </div>
@@ -557,12 +581,12 @@ function CaptureStat({
   warn?: boolean;
 }) {
   return (
-    <div className={cn("bg-surface px-4 py-3", warn && "bg-warning/5")}>
+    <div className={cn("bg-surface px-4 py-3", warn && "bg-warn/5")}>
       <span className="block text-micro text-text-faint">{label}</span>
       <strong
         className={cn(
           "mt-1 block text-xl font-bold tabular-nums text-text",
-          warn && "text-warning-text",
+          warn && "text-warn",
         )}
       >
         {value}
@@ -577,11 +601,13 @@ function TlsRow({
   scope,
   index,
   max,
+  suspiciousOnly,
 }: {
   row: TlsFingerprintRow;
   scope: SecurityTlsScope;
   index: number;
   max: number;
+  suspiciousOnly: boolean;
 }) {
   const s = useStrings();
   const v = s.details.pages.security.view;
@@ -589,7 +615,7 @@ function TlsRow({
     <div
       className={cn(
         "grid gap-3 bg-surface px-3 py-3 sm:grid-cols-[2rem_minmax(0,1fr)_minmax(110px,.5fr)_5.5rem] sm:items-center",
-        row.bad_or_probe > 0 && "bg-gradient-to-r from-warning/10 to-surface",
+        row.bad_or_probe > 0 && "bg-gradient-to-r from-warn/10 to-surface",
       )}
       data-security-row={row.bad_or_probe > 0 ? "warn" : "ok"}
     >
@@ -609,27 +635,33 @@ function TlsRow({
         >
           {tlsRowSecondary(row, scope)}
         </span>
+        <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-meta text-text-muted">
+          <div><dt className="inline">{v.firstSeen}: </dt><dd className="inline">{tlsSeenAt(s, row.first_seen_epoch_secs)}</dd></div>
+          <div><dt className="inline">{v.lastSeen}: </dt><dd className="inline">{tlsSeenAt(s, row.last_seen_epoch_secs)}</dd></div>
+        </dl>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-bg ring-1 ring-inset ring-border">
         <i
           className={cn(
             "block h-full rounded-full bg-gradient-to-r",
-            row.bad_or_probe > 0 ? "from-warning/60 to-warning" : "from-accent/60 to-accent",
+            row.bad_or_probe > 0 ? "from-warn/60 to-warn" : "from-accent/60 to-accent",
           )}
-          style={{ width: `${Math.max(2, (row.total / max) * 100)}%` }}
+          style={{ width: `${Math.max(2, ((suspiciousOnly ? row.bad_or_probe : row.total) / max) * 100)}%` }}
         />
       </div>
       <div className="flex items-end justify-between gap-3 sm:block sm:text-right">
         <strong className="text-base font-bold tabular-nums text-text">
-          {formatNumber(s, row.total)}
+          {formatNumber(s, suspiciousOnly ? row.bad_or_probe : row.total)}
         </strong>
         <span
           className={cn(
             "block text-micro",
-            row.bad_or_probe > 0 ? "text-warning-text" : "text-text-faint",
+            row.bad_or_probe > 0 ? "text-warn" : "text-text-faint",
           )}
         >
-          {row.bad_or_probe > 0
+          {suspiciousOnly
+            ? fill(v.totalObserved, { count: formatNumber(s, row.total) })
+            : row.bad_or_probe > 0
             ? fill(v.needReview, { count: formatNumber(s, row.bad_or_probe) })
             : v.noSignals}
         </span>
@@ -859,7 +891,22 @@ export function SecurityPage() {
   const tlsQuery = useTlsFingerprintsQuery();
   const navigate = useNavigate();
   const nowMs = useNow(1_000);
-  const [tab, setTab] = useState<SecurityTab>("posture");
+  const search = useSearch({ from: "/_authed/pulse/diag/$domain" });
+  const tab: SecurityTab = search.tab === "tls" || search.tab === "limits" ? search.tab : "posture";
+  const scope = search.tlsScope ?? "by_fingerprint";
+  const suspiciousOnly = search.tlsFilter === "suspicious";
+  const detailsRef = useRef<HTMLHeadingElement>(null);
+  const [reviewKey, setReviewKey] = useState(0);
+  function reviewTls() {
+    setReviewKey((value) => value + 1);
+    void navigate({
+      to: "/pulse/diag/$domain", params: { domain: "security" },
+      search: { tab: "tls", tlsScope: "by_ip", tlsFilter: "suspicious" }, resetScroll: false,
+    }).then(() => {
+      detailsRef.current?.focus({ preventScroll: true });
+      detailsRef.current?.scrollIntoView({ block: "start" });
+    });
+  }
   const tls = tlsQuery.data?.data ?? undefined;
   const payload = securityPageData(topic.data, tls);
   const inputs: Record<string, DetailSourceInput> = {
@@ -901,7 +948,7 @@ export function SecurityPage() {
             onBack={() => void navigate({ to: "/pulse" })}
           />
         </div>
-        <SecurityHero posture={payload?.posture} tls={tls} />
+        <SecurityHero posture={payload?.posture} tls={tls} onReview={reviewTls} />
         <nav
           className="grid grid-cols-3 gap-1 border-b border-border bg-bg/40 px-3 py-2 sm:flex sm:overflow-x-auto"
           role="tablist"
@@ -914,7 +961,7 @@ export function SecurityPage() {
               role="tab"
               aria-label={label}
               aria-selected={tab === id}
-              onClick={() => setTab(id)}
+              onClick={() => void navigate({ to: "/pulse/diag/$domain", params: { domain: "security" }, search: (prev) => ({ ...prev, tab: id }), resetScroll: false })}
               className={cn(
                 "min-w-0 rounded-lg px-1.5 py-2 text-micro font-semibold sm:shrink-0 sm:px-3 sm:text-meta",
                 tab === id ? "bg-accent/15 text-accent" : "text-text-muted hover:bg-surface-hover",
@@ -939,9 +986,15 @@ export function SecurityPage() {
             ))}
           {tab === "tls" && (
             <TlsPanel
+              key={reviewKey}
               tls={tls}
               source={sources.byId["tls"]}
               onRetry={() => void tlsQuery.refetch()}
+              scope={scope}
+              suspiciousOnly={suspiciousOnly}
+              resultsRef={detailsRef}
+              onScopeChange={(tlsScope) => void navigate({ to: "/pulse/diag/$domain", params: { domain: "security" }, search: (prev) => ({ ...prev, tlsScope }), resetScroll: false })}
+              onFilterChange={(value) => void navigate({ to: "/pulse/diag/$domain", params: { domain: "security" }, search: (prev) => ({ ...prev, tlsFilter: value ? "suspicious" : undefined }), resetScroll: false })}
             />
           )}
           {tab === "limits" &&
