@@ -22,7 +22,7 @@ func TestPasswordLoginDoesNotRequireSecondFactor(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &me); err != nil {
 		t.Fatal(err)
 	}
-	if w.Code != http.StatusOK || len(me) != 2 || me["username"] == nil || me["passkeys"] == nil {
+	if w.Code != http.StatusOK || len(me) != 3 || string(me["auth_disabled"]) != "false" || me["username"] == nil || me["passkeys"] == nil {
 		t.Fatalf("unexpected auth identity: %d %s", w.Code, w.Body.String())
 	}
 }

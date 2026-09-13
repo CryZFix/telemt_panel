@@ -18,7 +18,7 @@ import { IconGlobe, IconPlus, IconTrash } from "../ui/icons";
 import { apiErrorMessage } from "./apiError";
 import { hasDuplicateWebProfiles, webProfilesForUser } from "./webAccess.helpers";
 
-export function WebAccessPanel({ username }: { username: string }) {
+export function WebAccessPanel({ username, readOnly = false }: { username: string; readOnly?: boolean }) {
   const s = useStrings();
   const query = useQuery(getTelemtWebAccessOptions());
   const [editing, setEditing] = useState(false);
@@ -55,7 +55,7 @@ export function WebAccessPanel({ username }: { username: string }) {
                 : s.people.webAccess.profileCount.replace("{count}", String(profiles.length))}
             </small>
           </span>
-          <Button size="sm" variant="secondary" disabled={vhosts.length === 0} onClick={() => setEditing(true)}>
+          <Button size="sm" variant="secondary" disabled={readOnly || vhosts.length === 0} onClick={() => setEditing(true)}>
             {s.people.webAccess.edit}
           </Button>
         </div>
@@ -79,6 +79,7 @@ export function WebAccessPanel({ username }: { username: string }) {
 
       <WebAccessEditor
         open={editing}
+        readOnly={readOnly}
         username={username}
         revision={query.data.revision}
         vhosts={vhosts.map(({ host, public_addr }) => ({ host, publicAddr: public_addr }))}
@@ -89,8 +90,9 @@ export function WebAccessPanel({ username }: { username: string }) {
   );
 }
 
-function WebAccessEditor({ open, username, revision, vhosts, initialProfiles, onClose }: {
+function WebAccessEditor({ open, readOnly, username, revision, vhosts, initialProfiles, onClose }: {
   open: boolean;
+  readOnly: boolean;
   username: string;
   revision: string;
   vhosts: Array<{ host: string; publicAddr: string }>;
@@ -141,7 +143,7 @@ function WebAccessEditor({ open, username, revision, vhosts, initialProfiles, on
         className="flex min-h-0 flex-1 flex-col"
         onSubmit={(event) => {
           event.preventDefault();
-          if (duplicate || invalid || mutation.isPending) return;
+          if (readOnly || duplicate || invalid || mutation.isPending) return;
           mutation.mutate({
             path: { username },
             headers: { "If-Match": revision },
@@ -209,7 +211,7 @@ function WebAccessEditor({ open, username, revision, vhosts, initialProfiles, on
 
         <footer className="flex shrink-0 gap-2 border-t border-border bg-surface px-4 py-3 pb-safe sm:px-5">
           <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>{s.common.cancel}</Button>
-          <Button type="submit" className="flex-1" disabled={duplicate || invalid || mutation.isPending}>{mutation.isPending ? s.common.loading : s.common.save}</Button>
+          <Button type="submit" className="flex-1" disabled={readOnly || duplicate || invalid || mutation.isPending}>{mutation.isPending ? s.common.loading : s.common.save}</Button>
         </footer>
       </form>
     </Sheet>

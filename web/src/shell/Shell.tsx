@@ -12,22 +12,17 @@ import {
 } from "./nav";
 import { useKeyboardInset } from "./useKeyboardInset";
 import { useLogout } from "../auth/useLogout";
+import { useAuthDisabled } from "../auth/useAuthDisabled";
+import { AuthDisabledNotice } from "../auth/AuthDisabledNotice";
 import { Sheet } from "../ui/Sheet";
 import { IconLogout, IconMore, IconSettings } from "../ui/icons";
 import { HistoryNotice } from "./HistoryNotice";
-import menuLogo from "../assets/logo-menu.webp";
+import { PanelLogo } from "../branding/branding";
+import { useBranding } from "../branding/useBranding";
 
 export function BrandMark({ className }: { className?: string }) {
-  return (
-    <img
-      src={menuLogo}
-      alt=""
-      width={160}
-      height={160}
-      aria-hidden="true"
-      className={cn("h-10 w-10 shrink-0 rounded-xl object-contain", className)}
-    />
-  );
+  const branding = useBranding();
+  return <PanelLogo branding={branding} className={cn("h-10 w-10 shrink-0 rounded-xl object-contain", className)} />;
 }
 
 // One information architecture in three geometries. The full sidebar starts
@@ -100,7 +95,7 @@ export function Shell({ children }: { children: ReactNode }) {
         >
           <div
             className={cn(
-              "mx-auto flex w-full max-w-[1440px] flex-1 flex-col",
+              "flex w-full min-w-0 flex-1 flex-col",
               // Only pages with their own scrollers may shrink below content height.
               // Ordinary pages must retain main's bottom padding after their content.
               ownsLayout && "min-h-0",
@@ -108,6 +103,7 @@ export function Shell({ children }: { children: ReactNode }) {
             data-testid="page-frame"
           >
             <HistoryNotice />
+            <AuthDisabledNotice />
             {children}
           </div>
         </main>
@@ -159,12 +155,14 @@ export function Shell({ children }: { children: ReactNode }) {
 
 function FullSidebar({ pathname }: { pathname: string }) {
   const s = useStrings();
+  const branding = useBranding();
   const logout = useLogout();
+  const authDisabled = useAuthDisabled();
   return (
     <aside data-testid="full-sidebar" className="hidden w-[240px] shrink-0 flex-col border-r border-border bg-surface px-3 py-4 min-[1180px]:flex">
       <div className="flex items-center gap-2.5 px-2.5 pb-5">
         <BrandMark />
-        <span className="flex-1 truncate text-sm font-bold text-text">{s.app.title}</span>
+        <span title={branding.title} className="min-w-0 flex-1 truncate text-sm font-bold text-text">{branding.title}</span>
       </div>
       <SidebarGroup label={s.shell.overviewGroup} items={OPERATIONAL_NAV_ITEMS} pathname={pathname} />
       <SidebarGroup
@@ -176,7 +174,7 @@ function FullSidebar({ pathname }: { pathname: string }) {
       <div className="mt-auto flex flex-col gap-2 pt-4">
         <StatusStrip variant="card" />
         <div className="flex items-center gap-1">
-          <button
+          {!authDisabled && <button
             type="button"
             onClick={() => logout.mutate({})}
             disabled={logout.isPending}
@@ -188,7 +186,7 @@ function FullSidebar({ pathname }: { pathname: string }) {
           >
             <IconLogout className="h-4 w-4 shrink-0" />
             {s.auth.signOut}
-          </button>
+          </button>}
           <HeaderMenu />
         </div>
       </div>
@@ -279,6 +277,7 @@ function BottomLink({ item, active }: { item: NavItem; active: boolean }) {
 function SecondaryLinks({ onNavigate }: { onNavigate: () => void }) {
   const s = useStrings();
   const logout = useLogout();
+  const authDisabled = useAuthDisabled();
   return (
     <div role="menu" className="flex flex-col gap-1">
       {MANAGEMENT_NAV_ITEMS.map(({ to, labelKey, Icon }) => (
@@ -303,7 +302,7 @@ function SecondaryLinks({ onNavigate }: { onNavigate: () => void }) {
         {s.shell.panelSettings}
       </Link>
       <div className="my-1 border-t border-border" />
-      <button
+      {!authDisabled && <button
         type="button"
         role="menuitem"
         disabled={logout.isPending}
@@ -312,7 +311,7 @@ function SecondaryLinks({ onNavigate }: { onNavigate: () => void }) {
       >
         <IconLogout className="h-5 w-5 shrink-0" />
         {s.auth.signOut}
-      </button>
+      </button>}
     </div>
   );
 }

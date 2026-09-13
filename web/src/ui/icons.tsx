@@ -505,6 +505,14 @@ export function IconSwap(props: IconProps) {
   );
 }
 
+export function IconRoute(props: IconProps) {
+  return <Icon {...props}><path d="M4 12h5c4 0 2-6 6-6h5m-3-3 3 3-3 3M9 12c4 0 2 6 6 6h5m-3-3 3 3-3 3" /></Icon>;
+}
+
+export function IconTelegramOutline(props: IconProps) {
+  return <Icon {...props}><path d="m3 10 18-7-4 18-6-6-4 3v-5L3 10Zm4 3 10-6-6 8" /></Icon>;
+}
+
 export function IconTelegram(props: IconProps) {
   return (
     <Icon {...props} fill="currentColor" stroke="none">

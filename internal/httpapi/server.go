@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/amirotin/telemt_panel/internal/auth"
+	"github.com/amirotin/telemt_panel/internal/branding"
 	"github.com/amirotin/telemt_panel/internal/config"
 	"github.com/amirotin/telemt_panel/internal/geoip"
 	"github.com/amirotin/telemt_panel/internal/host"
@@ -70,6 +71,7 @@ type Server struct {
 	updateEngine *update.Engine
 	autoUpdater  *update.AutoUpdater
 	geoip        *geoip.Manager
+	branding     *branding.Manager
 
 	// webUI serves the embedded SPA (internal/webui) — registered as the
 	// mux's catch-all "/" pattern in Handler(), after every /api/ and
@@ -166,12 +168,16 @@ func New(cfg *config.Config, tc *telemt.Client, st store.Store, hb *hub.Hub, ver
 		BuildVariant: store.Variant,
 	})
 
+	appearance := branding.New(st, cfg.BasePath)
 	webUI, err := webui.New(webui.Embedded(), cfg.BasePath)
 	if err != nil {
 		// See the webUI field's doc comment — unreachable outside a
 		// corrupted embed, logged rather than fatal so the API/subpage
 		// surface still comes up.
 		slog.Error("build webui handler", "err", err)
+	}
+	if webUI != nil {
+		webUI.SetBranding(appearance.Public)
 	}
 
 	return &Server{
@@ -195,6 +201,7 @@ func New(cfg *config.Config, tc *telemt.Client, st store.Store, hb *hub.Hub, ver
 		updateEngine:       updateEngine,
 		autoUpdater:        update.NewAutoUpdater(st, updateEngine),
 		geoip:              geoip.NewManager(cfg.DataDir, st),
+		branding:           appearance,
 		runner:             runner,
 		telemtServiceName:  telemtServiceName,
 		webUI:              webUI,
@@ -293,10 +300,21 @@ func (s *Server) Handler() http.Handler {
 	protect := func(h http.HandlerFunc) http.Handler {
 		return chain(h, auth.CSRF(s.cfg), auth.RequireSession(s.st, s.cfg))
 	}
+	// Disabled authentication has no sessions or credential-management API.
+	// Keep these routes explicit; normal panel APIs still retain CSRF checks.
+	sessionOnly := func(h http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if s.cfg.Auth.Disabled {
+				auth.WriteError(w, http.StatusForbidden, "auth_disabled", "panel authentication is disabled in the configuration")
+				return
+			}
+			h(w, r)
+		}
+	}
 
-	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
+	mux.HandleFunc("POST /api/auth/login", sessionOnly(s.handleLogin))
 	mux.HandleFunc("GET /api/auth/methods", s.handleAuthMethods)
-	mux.Handle("POST /api/auth/logout", protect(s.handleLogout))
+	mux.Handle("POST /api/auth/logout", protect(sessionOnly(s.handleLogout)))
 	mux.Handle("GET /api/auth/me", protect(s.handleMe))
 	mux.Handle("GET /api/settings/tls", protect(func(w http.ResponseWriter, r *http.Request) {
 		subscription, ok := accessTarget(w, r)
@@ -313,14 +331,14 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/settings/tls/prepare", protect(s.handlePrepareTLS))
 	mux.Handle("PUT /api/settings/tls/config", protect(s.handlePutTLSConfig))
 	mux.Handle("POST /api/settings/tls/restart", protect(s.handleRestartTLS))
-	mux.Handle("GET /api/auth/sessions", protect(s.handleListSessions))
-	mux.Handle("DELETE /api/auth/sessions", protect(s.handleRevokeOtherSessions))
-	mux.Handle("DELETE /api/auth/sessions/{sessionId}", protect(s.handleRevokeSession))
-	mux.Handle("POST /api/auth/webauthn/register/begin", protect(s.handleWebAuthnRegisterBegin))
-	mux.Handle("POST /api/auth/webauthn/register/finish", protect(s.handleWebAuthnRegisterFinish))
-	mux.HandleFunc("POST /api/auth/webauthn/login/begin", s.handleWebAuthnLoginBegin)
-	mux.HandleFunc("POST /api/auth/webauthn/login/finish", s.handleWebAuthnLoginFinish)
-	mux.Handle("DELETE /api/auth/webauthn/credentials/{credentialId}", protect(s.handleWebAuthnCredentialDelete))
+	mux.Handle("GET /api/auth/sessions", protect(sessionOnly(s.handleListSessions)))
+	mux.Handle("DELETE /api/auth/sessions", protect(sessionOnly(s.handleRevokeOtherSessions)))
+	mux.Handle("DELETE /api/auth/sessions/{sessionId}", protect(sessionOnly(s.handleRevokeSession)))
+	mux.Handle("POST /api/auth/webauthn/register/begin", protect(sessionOnly(s.handleWebAuthnRegisterBegin)))
+	mux.Handle("POST /api/auth/webauthn/register/finish", protect(sessionOnly(s.handleWebAuthnRegisterFinish)))
+	mux.HandleFunc("POST /api/auth/webauthn/login/begin", sessionOnly(s.handleWebAuthnLoginBegin))
+	mux.HandleFunc("POST /api/auth/webauthn/login/finish", sessionOnly(s.handleWebAuthnLoginFinish))
+	mux.Handle("DELETE /api/auth/webauthn/credentials/{credentialId}", protect(sessionOnly(s.handleWebAuthnCredentialDelete)))
 
 	mux.Handle("GET /api/telemt/info", protect(s.handleTelemtInfo))
 	mux.Handle("GET /api/telemt/config", protect(s.handleGetTelemtConfig))
@@ -353,6 +371,11 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/traffic/summary", protect(s.handleGetTrafficSummary))
 	mux.Handle("GET /api/traffic/users", protect(s.handleGetTrafficUsers))
 	mux.Handle("POST /api/traffic/reset", protect(s.handleResetAllUserTraffic))
+	mux.HandleFunc("GET /api/branding", s.handlePublicBranding)
+	mux.HandleFunc("GET /api/branding/logo", s.handleBrandingAsset)
+	mux.HandleFunc("GET /api/branding/icon", s.handleBrandingAsset)
+	mux.Handle("GET /api/settings/branding", protect(s.handleGetBranding))
+	mux.Handle("PUT /api/settings/branding", protect(s.handlePutBranding))
 	mux.Handle("GET /api/settings/storage", protect(s.handleGetStorageSettings))
 	mux.Handle("PUT /api/settings/storage", protect(s.handlePutStorageSettings))
 	mux.Handle("POST /api/settings/storage/purge", protect(s.handlePurgeStorageHistory))

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useSnapshot, useTopicWindow } from "../../realtime";
 import type { RuntimeTopic, StatsSnapshot, UpstreamsTopic } from "../../realtime/topics";
@@ -8,6 +8,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { IconCheck, IconChevronRight, IconInfo, IconWarning } from "../../ui/icons";
 import { formatNumber, useStrings } from "../../i18n";
 import { cn } from "../../lib/cn";
+import { Button } from "../../ui/Button";
 import { WidgetFrame } from "../WidgetFrame";
 import { resolveGated } from "./gated";
 import { computeMeCard } from "./mePool.helpers";
@@ -32,10 +33,10 @@ const SEVERITY_TEXT: Record<ReturnType<typeof problemSeverity>, string> = {
   muted: "text-text-faint",
 };
 
-// Problems — one compact line while nothing is wrong, a ranked list of what
-// is wrong otherwise.
+// Retain a minimum footprint, but never clip the information needed to act.
 export function Problems() {
   const s = useStrings();
+  const [expanded, setExpanded] = useState(false);
   const stats = useSnapshot<StatsSnapshot>("stats");
   const runtime = useSnapshot<RuntimeTopic>("runtime");
   const upstreams = useSnapshot<UpstreamsTopic>("upstreams");
@@ -47,7 +48,7 @@ export function Problems() {
 
   if (!stats.data) {
     return (
-      <WidgetFrame title={s.pulse.widgets.problems} className="h-[174px]">
+      <WidgetFrame title={s.pulse.widgets.problems} className="min-h-[174px]">
         <Skeleton className="h-16 w-full" />
       </WidgetFrame>
     );
@@ -86,47 +87,41 @@ export function Problems() {
   }
   if (items.length === 0) {
     return (
-      <WidgetFrame title={s.pulse.widgets.problems} className="h-[174px]">
-        <ul className="flex min-h-0 flex-1 flex-col">
-          <li className="flex min-h-[56px] items-start gap-2.5 border-b border-border px-1 py-2">
+      <WidgetFrame title={s.pulse.widgets.problems} className="min-h-[174px]">
+        <ul className="flex flex-1 flex-col">
+          <li className="flex min-h-[56px] items-start gap-2.5 px-1 py-2">
             <IconCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ok" />
             <div className="min-w-0 flex-1">
               <p className="text-row text-text">{s.pulse.problems.none}</p>
-              <p className="mt-1 text-micro leading-relaxed text-text-muted">
+              <p className="mt-1 text-meta leading-relaxed text-text-muted">
                 {s.pulse.problems.noneHint}
               </p>
             </div>
           </li>
-          <li aria-hidden="true" className="min-h-[46px] flex-1" />
         </ul>
       </WidgetFrame>
     );
   }
 
-  // Two detailed rows always fit the fixed-height frame; the remainder is
-  // summarized instead of being clipped and making the page jump.
-  const visibleItems = items.slice(0, 2);
+  const visibleItems = expanded ? items : items.slice(0, 6);
   const remaining = items.length - visibleItems.length;
   return (
     <WidgetFrame
       title={s.pulse.widgets.problems}
       badge={<CountBadge tone="warn">{items.length}</CountBadge>}
-      className="h-[174px] overflow-hidden"
+      className="overview-problems min-h-[174px]"
     >
-      <ul className="flex min-h-0 flex-col overflow-hidden">
+      <ul className="overview-problem-grid" data-testid="overview-problems">
         {visibleItems.map((item) => (
-          <li key={item.key} className="border-b border-border last:border-b-0">
+          <li key={item.key} className="min-w-0" data-testid="overview-problem">
             <ProblemRow item={item} />
           </li>
         ))}
-        {Array.from({ length: Math.max(0, 2 - visibleItems.length) }, (_, index) => (
-          <li key={`empty-${index}`} aria-hidden="true" className="min-h-[46px] border-b border-border last:border-b-0" />
-        ))}
       </ul>
-      {remaining > 0 && (
-        <Link to="/pulse" className="mt-auto text-micro font-semibold text-accent hover:underline">
-          +{formatNumber(s, remaining)} {s.pulse.problems.more}
-        </Link>
+      {items.length > 6 && (
+        <Button variant="secondary" className="self-start" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+          {expanded ? s.pulse.problems.showLess : `${s.pulse.problems.showMore} · +${formatNumber(s, remaining)}`}
+        </Button>
       )}
     </WidgetFrame>
   );
@@ -140,13 +135,14 @@ function ProblemRow({ item }: { item: ProblemItem }) {
   const domain = problemDomain(item.key);
   const body = <ProblemRowBody item={item} linked={domain !== undefined} />;
   if (domain === undefined) {
-    return <div className="flex items-start gap-2.5 px-1 py-2">{body}</div>;
+    return <div className="flex h-full min-h-16 items-start gap-2.5 rounded-lg bg-surface-2 px-3 py-2.5">{body}</div>;
   }
   return (
     <Link
       to="/pulse/diag/$domain"
       params={{ domain }}
-      className="flex items-start gap-2.5 rounded-md px-1 py-2 transition-colors hover:bg-surface-2"
+      search={item.key === "tls_probe_anomaly" ? { tab: "tls", tlsScope: "by_ip", tlsFilter: "suspicious" } : {}}
+      className="flex h-full min-h-16 items-start gap-2.5 rounded-lg bg-surface-2 px-3 py-2.5 transition-colors hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-accent"
     >
       {body}
     </Link>
@@ -159,15 +155,15 @@ function ProblemRowBody({ item, linked }: { item: ProblemItem; linked: boolean }
   return (
     <>
       <Icon aria-hidden="true" className={cn("mt-0.5 h-4 w-4 shrink-0", SEVERITY_TEXT[severity])} />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
         <span className="block text-row text-text">{item.label}</span>
         {item.detail !== undefined && (
-          <span className="mt-0.5 block text-micro leading-relaxed text-text-muted">
+          <span className="mt-0.5 block text-meta leading-relaxed text-text-muted">
             {item.detail}
           </span>
         )}
         {item.hint !== undefined && (
-          <span className="mt-0.5 block truncate text-micro italic leading-relaxed text-text-faint">
+          <span className="mt-0.5 block text-meta italic leading-relaxed text-text-faint">
             {item.hint}
           </span>
         )}

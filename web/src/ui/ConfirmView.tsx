@@ -6,6 +6,7 @@ export interface ConfirmViewProps {
   confirmLabel: string;
   danger?: boolean;
   pending: boolean;
+  disabled?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -22,6 +23,7 @@ export function ConfirmView({
   confirmLabel,
   danger,
   pending,
+  disabled,
   onCancel,
   onConfirm,
 }: ConfirmViewProps) {
@@ -33,7 +35,7 @@ export function ConfirmView({
         <Button variant="secondary" onClick={onCancel} disabled={pending} className="flex-1">
           {s.people.actions.cancel}
         </Button>
-        <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={pending} className="flex-1">
+        <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={pending||disabled} className="flex-1">
           {confirmLabel}
         </Button>
       </div>

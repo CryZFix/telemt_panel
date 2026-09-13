@@ -26,7 +26,10 @@ function user(overrides: Partial<UsersTopicUser> & { username: string }): UsersT
 }
 
 function topic(users: UsersTopicUser[], quota?: UsersTopic["quota"]): UsersTopic {
-  return { users, quota: quota ?? null, quota_supported: quota !== undefined };
+  // Most fixtures use the same numerical usage for both counters; provide
+  // an explicit quota observation rather than relying on a UI fallback.
+  const observations=Object.fromEntries(users.filter(u=>u.data_quota_bytes).map(u=>[u.username,{data_quota_bytes:u.data_quota_bytes!,used_bytes:u.total_octets,last_reset_epoch_secs:0}]));
+  return { users, quota: quota===undefined?observations:quota, quota_supported:true };
 }
 
 function inDays(days: number): string {
@@ -34,6 +37,9 @@ function inDays(days: number): string {
 }
 
 describe("computeQuotaWatch — who is about to stop working", () => {
+  it("does not label cumulative traffic as exhausted quota during an API failure",()=>{
+    expect(computeQuotaWatch(topic([user({username:"unknown",data_quota_bytes:100,total_octets:1000})],null),NOW)).toEqual([]);
+  });
   it("is empty before the first users frame, and on a healthy fleet", () => {
     expect(computeQuotaWatch(null, NOW)).toEqual([]);
     expect(

@@ -15,6 +15,8 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+
+	"github.com/amirotin/telemt_panel/internal/branding"
 )
 
 // init registers the Web App Manifest's MIME type. Go's builtin mime map
@@ -59,8 +61,10 @@ func Embedded() fs.FS {
 // (TanStack Router) resolves the route in the browser instead of getting a
 // 404 on refresh/deep-link.
 type Handler struct {
-	fsys     fs.FS
-	fileServ http.Handler
+	branding   func() branding.Public
+	appearance appearanceCache
+	fsys       fs.FS
+	fileServ   http.Handler
 
 	// index is index.html with base_path injected (see patchIndex), or nil
 	// on a checkout that hasn't run `make web` yet (dist/ holds only the
@@ -168,6 +172,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p := strings.TrimPrefix(r.URL.Path, "/")
+	if p == "manifest.webmanifest" && h.branding != nil {
+		h.serveBrandedManifest(w, r)
+		return
+	}
 	if p == "" || p == "index.html" {
 		h.serveIndex(w, r)
 		return
@@ -236,14 +244,15 @@ func (h *Handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	index, etag := h.brandedIndex()
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("ETag", h.indexETag)
-	if match := r.Header.Get("If-None-Match"); match != "" && match == h.indexETag {
+	w.Header().Set("ETag", etag)
+	if match := r.Header.Get("If-None-Match"); match != "" && match == etag {
 		w.WriteHeader(http.StatusNotModified)
 		return
 	}
 	if r.Method == http.MethodHead {
 		return
 	}
-	_, _ = w.Write(h.index)
+	_, _ = w.Write(index)
 }

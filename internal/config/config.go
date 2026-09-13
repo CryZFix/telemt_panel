@@ -53,6 +53,7 @@ type TelemtConfig struct {
 
 // AuthConfig holds the password login; passkey state lives in the store.
 type AuthConfig struct {
+	Disabled     bool   `toml:"disabled"`
 	Username     string `toml:"username"`
 	PasswordHash string `toml:"password_hash"`
 	SessionTTL   string `toml:"session_ttl"`
@@ -194,10 +195,10 @@ func decode(data []byte, path string) (*Config, error) {
 	default:
 		return nil, fmt.Errorf("telemt.config_edit_mode: unknown value %q (api | file)", cfg.Telemt.ConfigEditMode)
 	}
-	if cfg.Auth.Username == "" {
+	if !cfg.Auth.Disabled && cfg.Auth.Username == "" {
 		return nil, fmt.Errorf("auth.username is required")
 	}
-	if cfg.Auth.PasswordHash == "" {
+	if !cfg.Auth.Disabled && cfg.Auth.PasswordHash == "" {
 		return nil, fmt.Errorf("auth.password_hash is required")
 	}
 	if cfg.Auth.SessionTTL != "" {

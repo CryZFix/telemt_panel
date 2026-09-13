@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Sheet } from "../ui/Sheet";
+import { Sheet, type SheetProps } from "../ui/Sheet";
 import { Button } from "../ui/Button";
 import { CopyField } from "../ui/CopyField";
 import { Toggle } from "../ui/Toggle";
@@ -38,6 +38,9 @@ export interface UserFormSheetProps {
   user?: UsersTopicUser | null;
   onSaved?: (username: string) => void;
   onConfigureWeb?: (username: string) => void;
+  inline?: boolean;
+  disabled?: boolean;
+  onDirtyChange?: (dirty:boolean)=>void;
 }
 
 // The form renders set values directly and treats an empty optional input as
@@ -110,7 +113,7 @@ function initialEditState(user: UsersTopicUser): FormState {
 // limit uses the same direct-value controls in both modes. Empty optional
 // fields mean "unlimited/not set"; the edit serializer compares the resulting
 // state with the original user so untouched values remain omitted from PATCH.
-export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureWeb }: UserFormSheetProps) {
+export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureWeb, inline, disabled=false, onDirtyChange }: UserFormSheetProps) {
   const s = useStrings();
   const [state, setState] = useState<FormState>(() =>
     mode === "edit" && user ? initialEditState(user) : initialCreateState(),
@@ -131,14 +134,19 @@ export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureW
   // cascading render — this bails out during the same render instead.
   const openKey = open ? `${mode}:${mode === "edit" ? (user?.username ?? "") : "create"}` : null;
   const [lastOpenKey, setLastOpenKey] = useState<string | null>(null);
+  const [baseline,setBaseline] = useState(state);
+  const [baseUser,setBaseUser] = useState(user);
   if (openKey !== null && openKey !== lastOpenKey) {
     setLastOpenKey(openKey);
-    setState(mode === "edit" && user ? initialEditState(user) : initialCreateState());
+    const initial = mode === "edit" && user ? initialEditState(user) : initialCreateState();
+    setState(initial);setBaseline(initial);setBaseUser(user);
     setUsernameTouched(false);
     setCreatedSecret(null);
     setActivePreset(mode === "create" ? "unlimited" : null);
   }
 
+  const dirty=JSON.stringify(state)!==JSON.stringify(baseline);
+  useEffect(()=>{onDirtyChange?.(dirty);},[dirty,onDirtyChange]);
   const refreshTopic = useRefreshTopic();
 
   const createMutation = useMutation({
@@ -165,7 +173,7 @@ export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureW
 
   const pending = createMutation.isPending || patchMutation.isPending;
   const usernameValid = isValidUsername(state.username);
-  const canSubmit = mode === "edit" || (usernameValid && isValidSecret(state.secret));
+  const canSubmit = !disabled && (mode === "edit" || (usernameValid && isValidSecret(state.secret)));
 
   function changedLimit<T>(f: FieldState<T>, original: T | undefined): LimitFieldState<T> {
     return diffLimitField(f.mode === "set" ? f.value : undefined, original);
@@ -180,7 +188,7 @@ export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureW
       value: quotaBytesForFormSubmit(
         state.quotaAmount.value,
         state.quotaUnit,
-        mode === "edit" ? user?.data_quota_bytes : undefined,
+        mode === "edit" ? baseUser?.data_quota_bytes : undefined,
         state.quotaEdited,
       ),
     };
@@ -207,22 +215,22 @@ export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureW
     patchMutation.mutate({
       path: { username: state.username },
       body: buildUserPatch({
-        enabled: state.enabled !== user?.enabled ? state.enabled : undefined,
-        userAdTag: changedLimit(state.userAdTag, user?.user_ad_tag || undefined),
-        maxTcpConns: changedLimit(state.maxTcpConns, user?.max_tcp_conns || undefined),
-        maxUniqueIps: changedLimit(state.maxUniqueIps, user?.max_unique_ips || undefined),
+        enabled: state.enabled !== baseUser?.enabled ? state.enabled : undefined,
+        userAdTag: changedLimit(state.userAdTag, baseUser?.user_ad_tag || undefined),
+        maxTcpConns: changedLimit(state.maxTcpConns, baseUser?.max_tcp_conns || undefined),
+        maxUniqueIps: changedLimit(state.maxUniqueIps, baseUser?.max_unique_ips || undefined),
         dataQuotaBytes: changedLimit(
           quotaBytesField,
-          user?.data_quota_bytes ? user.data_quota_bytes : undefined,
+          baseUser?.data_quota_bytes ? baseUser.data_quota_bytes : undefined,
         ),
-        expirationRfc3339: changedLimit(state.expiration, user?.expiration_rfc3339 || undefined),
+        expirationRfc3339: changedLimit(state.expiration, baseUser?.expiration_rfc3339 || undefined),
         rateLimitUpBps: changedLimit(
           state.rateLimitUpBps,
-          user?.rate_limit_up_bps ? user.rate_limit_up_bps : undefined,
+          baseUser?.rate_limit_up_bps ? baseUser.rate_limit_up_bps : undefined,
         ),
         rateLimitDownBps: changedLimit(
           state.rateLimitDownBps,
-          user?.rate_limit_down_bps ? user.rate_limit_down_bps : undefined,
+          baseUser?.rate_limit_down_bps ? baseUser.rate_limit_down_bps : undefined,
         ),
       }),
     });
@@ -257,16 +265,16 @@ export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureW
 
   if (createdSecret) {
     return (
-      <Sheet open={open} onClose={onClose} placement="form" title={s.people.newSecret.title} subtitle={state.username}>
+      <FormSurface inline={inline} open={open} onClose={onClose} placement="form" title={s.people.newSecret.title} subtitle={state.username}>
         <div className="flex flex-col gap-4 py-2">
           <p className="rounded-xl border border-warn/30 bg-warn/10 p-3 text-sm text-warn">{s.people.newSecret.warning}</p>
           <CopyField value={createdSecret} label={s.people.form.secret} data-testid="created-user-secret" />
           <div className="grid gap-2 sm:grid-cols-2">
             <Button variant="secondary" onClick={onClose}>{s.people.newSecret.close}</Button>
-            {onConfigureWeb && <Button onClick={() => { onClose(); onConfigureWeb(state.username); }}>{s.people.newSecret.configureWeb}</Button>}
+            {onConfigureWeb && <Button onClick={() => { if(!inline)onClose(); onConfigureWeb(state.username); }}>{s.people.newSecret.configureWeb}</Button>}
           </div>
         </div>
-      </Sheet>
+      </FormSurface>
     );
   }
 
@@ -279,9 +287,10 @@ export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureW
   const creating = mode === "create";
 
   return (
-    <Sheet
+    <FormSurface
+      inline={inline}
       open={open}
-      onClose={onClose}
+      onClose={()=>{if(!pending)onClose();}}
       placement="form"
       eyebrow={creating ? s.people.form.createEyebrow : s.people.form.editEyebrow}
       title={creating ? s.people.form.createTitle : s.people.form.editTitle}
@@ -352,10 +361,15 @@ export function UserFormSheet({ open, onClose, mode, user, onSaved, onConfigureW
           </details>
         </div>
         <footer className="people-form-foot">
-          <Button type="button" variant="secondary" onClick={onClose}>{s.common.cancel}</Button>
+          <Button type="button" variant="secondary" disabled={pending} onClick={onClose}>{s.common.cancel}</Button>
           <Button type="submit" data-testid="user-form-submit" disabled={!canSubmit || pending}>{pending ? s.people.form.submitting : creating ? s.people.form.submitCreateFull : s.people.form.submitEdit}</Button>
         </footer>
       </form>
-    </Sheet>
+    </FormSurface>
   );
+}
+
+function FormSurface({inline,...props}:SheetProps & {inline?:boolean}) {
+  if(!inline)return <Sheet {...props}/>;
+  return props.open?<section className="user-inline-form">{props.children}</section>:null;
 }

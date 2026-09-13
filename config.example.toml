@@ -51,6 +51,9 @@ auth_header = ""
 # config_edit_mode = "api" # api | file
 
 [auth]
+# Disable only behind an independently protected network/proxy. Full admin
+# access without a session; restart required. For a domain, set public_url.
+# disabled = false
 # Password login is the base method; optional passkeys are enabled from the
 # UI and live in panel-state.json, not here.
 username = "admin"

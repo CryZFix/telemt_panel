@@ -161,6 +161,8 @@ describe("UserActionSheet — toggle-enabled confirmation", () => {
     // flips the user to disabled.
     render(makeUser({ enabled: false }));
     expect(confirmButton().textContent).toBe("Отключить");
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,30));});
+    await vi.waitFor(()=>expect(confirmButton().disabled).toBe(false));
 
     await act(async () => {
       confirmButton().dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -216,12 +218,12 @@ describe("UserActionSheet — toggle-enabled confirmation", () => {
 
     render(makeUser(), "menu", queryClient);
     const openConfirmation = [...document.body.querySelectorAll("button")].find(
-      (button) => button.textContent === ru.people.actions.resetTraffic,
+      (button) => (button.querySelector("strong")?.textContent ?? button.textContent) === ru.people.actions.resetTraffic,
     );
     if (!openConfirmation) throw new Error("traffic reset action button not found");
     await act(async () => openConfirmation.click());
     const confirm = [...document.body.querySelectorAll("button")].find(
-      (button) => button.textContent === ru.people.actions.resetTraffic,
+      (button) => (button.querySelector("strong")?.textContent ?? button.textContent) === ru.people.actions.resetTraffic,
     );
     if (!confirm) throw new Error("traffic reset confirmation button not found");
 
@@ -252,7 +254,7 @@ describe("UserActionSheet — toggle-enabled confirmation", () => {
     render(makeUser(), "menu", queryClient);
     const resetButton = () => {
       const button = [...document.body.querySelectorAll("button")].find(
-        (candidate) => candidate.textContent === ru.people.actions.resetTraffic,
+        (candidate) => (candidate.querySelector("strong")?.textContent ?? candidate.textContent) === ru.people.actions.resetTraffic,
       );
       if (!button) throw new Error("traffic reset button not found");
       return button;
@@ -279,12 +281,12 @@ describe("UserActionSheet — toggle-enabled confirmation", () => {
 
     render(makeUser(), "menu", queryClient);
     const openConfirmation = [...document.body.querySelectorAll("button")].find(
-      (button) => button.textContent === ru.people.actions.resetTraffic,
+      (button) => (button.querySelector("strong")?.textContent ?? button.textContent) === ru.people.actions.resetTraffic,
     );
     if (!openConfirmation) throw new Error("traffic reset action button not found");
     await act(async () => openConfirmation.click());
     const confirm = [...document.body.querySelectorAll("button")].find(
-      (button) => button.textContent === ru.people.actions.resetTraffic,
+      (button) => (button.querySelector("strong")?.textContent ?? button.textContent) === ru.people.actions.resetTraffic,
     );
     if (!confirm) throw new Error("traffic reset confirmation button not found");
 

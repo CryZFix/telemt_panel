@@ -288,9 +288,13 @@ func newSourceStore(source *config.Source) (store.Store, error) {
 			slog.Warn("legacy startup", "code", warning)
 		}
 	}
-	if err := state.BindPasswordAuth(cfg.Auth.Username, cfg.Auth.PasswordHash); err != nil {
-		_ = state.Close()
-		return nil, fmt.Errorf("bind password authentication: %w", err)
+	if cfg.Auth.Disabled {
+		slog.Warn("panel authentication is DISABLED; anyone reaching the listener has full administrator access; restrict access with a firewall or authenticated reverse proxy")
+	} else {
+		if err := state.BindPasswordAuth(cfg.Auth.Username, cfg.Auth.PasswordHash); err != nil {
+			_ = state.Close()
+			return nil, fmt.Errorf("bind password authentication: %w", err)
+		}
 	}
 	history, err := store.Open(store.OpenOptions{
 		Driver: cfg.Store.Driver,

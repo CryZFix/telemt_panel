@@ -149,13 +149,13 @@ func finishSignedPasskey(t *testing.T, h http.Handler, body []byte) *httptest.Re
 	return w
 }
 
-func TestAuthMethodsOnlyExposePasskeyAvailability(t *testing.T) {
+func TestAuthMethodsOnlyExposeModeAndPasskeyAvailability(t *testing.T) {
 	srv := newTestServer(t)
 	h := srv.Handler()
 	r := httptest.NewRequest(http.MethodGet, "/api/auth/methods", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != http.StatusOK || w.Body.String() != "{\"passkey_available\":false}\n" {
+	if w.Code != http.StatusOK || w.Body.String() != "{\"auth_disabled\":false,\"passkey_available\":false}\n" {
 		t.Fatalf("methods = %d %s", w.Code, w.Body.String())
 	}
 }
@@ -484,6 +484,28 @@ func TestWebAuthnOriginIgnoresUntrustedForwarding(t *testing.T) {
 	}
 	if origin != "http://panel.local:48280" || rpID != "panel.local" {
 		t.Fatalf("origin/RP = %q / %q", origin, rpID)
+	}
+}
+
+func TestWebAuthnRegistrationRejectsProxyMismatchBeforeIssuance(t *testing.T) {
+	for _, trusted := range []bool{false, true} {
+		srv := newTestServer(t)
+		if trusted {
+			srv.cfg.TrustedProxyPrefixes = []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
+		}
+		r := httptest.NewRequest(http.MethodPost, "http://panel.example/private/api/auth/webauthn/register/begin", strings.NewReader(`{"name":"test key"}`))
+		r.RemoteAddr = "127.0.0.1:5000"
+		r.Header.Set("Origin", "https://panel.example")
+		r.Header.Set("X-Forwarded-Proto", "https")
+		w := httptest.NewRecorder()
+		srv.handleWebAuthnRegisterBegin(w, r)
+		if trusted {
+			if w.Code != 200 {
+				t.Fatal(w.Body.String())
+			}
+		} else if w.Code != 400 || !strings.Contains(w.Body.String(), "invalid_webauthn_origin") || strings.Contains(w.Body.String(), "public_key") {
+			t.Fatalf("mismatch issued browser options: %d %s", w.Code, w.Body.String())
+		}
 	}
 }
 

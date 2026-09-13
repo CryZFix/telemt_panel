@@ -63,7 +63,7 @@ export function computeQuotaWatch(
     if (!user.enabled) continue;
 
     const quota = getUserQuota(user, topic.quota?.[user.username]);
-    const quotaFill = isUnlimitedQuota(quota.limitBytes)
+    const quotaFill = isUnlimitedQuota(quota.limitBytes) || quota.usedBytes === null
       ? null
       : quotaRatio(quota.usedBytes, quota.limitBytes);
     const at = expiryAt(user);

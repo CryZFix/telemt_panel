@@ -13,7 +13,7 @@ import {
 import { webauthnDeleteCredentialMutation } from "../../lib/api/generated/@tanstack/react-query.gen";
 import type { PasskeyInfo } from "../../lib/api/generated/types.gen";
 import { useStrings } from "../../i18n";
-import { apiErrorMessage } from "../../people/apiError";
+import { apiErrorCode, apiErrorMessage } from "../../people/apiError";
 import { Button } from "../../ui/Button";
 import { ConfirmView } from "../../ui/ConfirmView";
 import { Input } from "../../ui/Input";
@@ -179,7 +179,7 @@ export function PasskeySettings({ passkeys }: PasskeySettingsProps) {
               {registerMutation.error instanceof DOMException &&
               registerMutation.error.name === "NotAllowedError"
                 ? s.server.settings.passkeyCancelled
-                : s.server.settings.passkeySetupFailed}
+                : apiErrorCode(registerMutation.error) ? apiErrorMessage({code:apiErrorCode(registerMutation.error)}, s) : s.server.settings.passkeySetupFailed}
             </p>
           )}
           <Button type="submit" disabled={!name.trim() || registerMutation.isPending}>

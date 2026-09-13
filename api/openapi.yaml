@@ -35,6 +35,76 @@ security:
   - session: []
 
 paths:
+  /api/branding:
+    get:
+      tags: [misc]
+      operationId: getPublicBranding
+      security: []
+      description: Public appearance only. Never includes the server image path.
+      responses:
+        "200":
+          description: Login and panel appearance
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicBranding" }
+  /api/branding/logo:
+    get:
+      tags: [misc]
+      operationId: getBrandingLogo
+      security: []
+      description: Cached, validated local image. No filesystem path parameter is accepted.
+      responses:
+        "200":
+          description: PNG, JPEG or WebP logo
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "304": { description: Image unchanged }
+        "404": { description: No custom logo available }
+  /api/branding/icon:
+    get:
+      tags: [misc]
+      operationId: getBrandingIcon
+      security: []
+      parameters:
+        - { name: size, in: query, schema: { type: integer, enum: [192, 512], default: 192 } }
+      responses:
+        "200":
+          description: PNG favicon/PWA icon; transparent when the logo is hidden or unavailable
+          content:
+            image/png: { schema: { type: string, format: binary } }
+        "304": { description: Icon unchanged }
+  /api/settings/branding:
+    get:
+      tags: [misc]
+      operationId: getBrandingSettings
+      responses:
+        "200":
+          description: Administrator-only appearance settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BrandingSettings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      tags: [misc]
+      operationId: putBrandingSettings
+      description: Save in local state and reload the image, including an unchanged path. No restart required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BrandingConfig" }
+      responses:
+        "200":
+          description: Saved appearance
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BrandingSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: CSRF rejected, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "500": { $ref: "#/components/responses/InternalError" }
   /api/settings/tls:
     parameters:
       - { name: target, in: query, schema: { type: string, enum: [panel, subscription], default: panel } }
@@ -163,6 +233,7 @@ paths:
                 username: { type: string }
                 password: { type: string }
       responses:
+        "403": { description: "Authentication disabled, unapproved anonymous host, or cross-site request", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "204": { description: Logged in; session cookie set }
         "400": { description: bad_request — malformed request body, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "401":
@@ -174,14 +245,16 @@ paths:
     post:
       tags: [auth]
       operationId: logout
-      responses: { "204": { description: Session revoked server-side; cookie cleared } }
+      responses:
+        "204": { description: Session revoked server-side; cookie cleared }
+        "403": { description: Authentication disabled or request rejected, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
 
   /api/auth/methods:
     get:
       tags: [auth]
       security: []
       operationId: getAuthMethods
-      description: Public passkey availability. Password login is always available.
+      description: Public authentication mode and passkey availability. Disabled mode is configured locally, never through this API.
       responses:
         "200":
           description: Available passwordless methods
@@ -192,12 +265,14 @@ paths:
                 required: [passkey_available]
                 properties:
                   passkey_available: { type: boolean }
+                  auth_disabled: { type: boolean, default: false }
 
   /api/auth/me:
     get:
       tags: [auth]
       operationId: getMe
       responses:
+        "403": { description: "Authentication disabled, unapproved anonymous host, or cross-site request", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "200":
           description: Current admin identity and enabled auth options
           content:
@@ -206,6 +281,7 @@ paths:
                 type: object
                 required: [username, passkeys]
                 properties:
+                  auth_disabled: { type: boolean, default: false, description: "When true, access is anonymous with full admin privileges and no session is issued." }
                   username: { type: string }
                   passkeys:
                     type: array
@@ -222,6 +298,7 @@ paths:
         - { name: cursor, in: query, schema: { type: string }, description: Opaque cursor returned by the previous page }
         - { name: q, in: query, schema: { type: string, maxLength: 200 }, description: Case-insensitive User-Agent or IP substring }
       responses:
+        "403": { description: "Authentication disabled, unapproved anonymous host, or cross-site request", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "200":
           description: Page of active sessions (current one flagged)
           content:
@@ -232,7 +309,9 @@ paths:
       tags: [auth]
       operationId: revokeOtherSessions
       description: Revoke all sessions except the current one.
-      responses: { "204": { description: Revoked } }
+      responses:
+        "204": { description: Revoked }
+        "403": { description: Authentication disabled or request rejected, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
 
   /api/auth/sessions/{sessionId}:
     delete:
@@ -240,6 +319,7 @@ paths:
       operationId: revokeSession
       parameters: [ { name: sessionId, in: path, required: true, schema: { type: string } } ]
       responses:
+        "403": { description: "Authentication disabled, unapproved anonymous host, or cross-site request", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "204": { description: Revoked }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -252,6 +332,7 @@ paths:
         required: true
         content: { application/json: { schema: { $ref: "#/components/schemas/WebAuthnRegisterBeginRequest" } } }
       responses:
+        "403": { description: "Authentication disabled, unapproved anonymous host, or cross-site request", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "200": { description: CredentialCreationOptions and one-time flow ID, content: { application/json: { schema: { $ref: "#/components/schemas/WebAuthnBeginResponse" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "429": { $ref: "#/components/responses/RateLimited" }
@@ -261,6 +342,7 @@ paths:
       operationId: webauthnRegisterFinish
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/WebAuthnFinishRequest" } } } }
       responses:
+        "403": { description: "Authentication disabled, unapproved anonymous host, or cross-site request", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "201": { description: Registered, content: { application/json: { schema: { $ref: "#/components/schemas/PasskeyInfo" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: Credential already registered, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
@@ -270,6 +352,7 @@ paths:
       security: []
       operationId: webauthnLoginBegin
       responses:
+        "403": { description: "Authentication disabled, unapproved anonymous host, or cross-site request", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "200": { description: CredentialRequestOptions and one-time flow ID, content: { application/json: { schema: { $ref: "#/components/schemas/WebAuthnBeginResponse" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -281,6 +364,7 @@ paths:
       operationId: webauthnLoginFinish
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/WebAuthnFinishRequest" } } } }
       responses:
+        "403": { description: "Authentication disabled, unapproved anonymous host, or cross-site request", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "204": { description: Logged in; session cookie set }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -290,7 +374,10 @@ paths:
       tags: [auth]
       operationId: webauthnDeleteCredential
       parameters: [ { name: credentialId, in: path, required: true, schema: { type: string } } ]
-      responses: { "204": { description: Deleted }, "404": { $ref: "#/components/responses/NotFound" } }
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "403": { description: Authentication disabled or request rejected, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
 
   # ───────────────────────── users ─────────────────────────
   /api/users:
@@ -1245,6 +1332,29 @@ components:
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
 
   schemas:
+    BrandingConfig:
+      type: object
+      required: [title, logo_mode, logo_path]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 80 }
+        logo_mode: { type: string, enum: [default, custom, hidden] }
+        logo_path: { type: string, maxLength: 4096, description: Absolute server path; required for custom mode. PNG/WebP/JPEG, up to 5 MiB, 4096px per side and 8 million pixels. }
+    PublicBranding:
+      type: object
+      required: [title, logo_mode, logo_url, icon_url]
+      properties:
+        title: { type: string }
+        logo_mode: { type: string, enum: [default, custom, hidden] }
+        logo_url: { type: string }
+        icon_url: { type: string }
+    BrandingSettings:
+      allOf:
+        - $ref: "#/components/schemas/BrandingConfig"
+        - type: object
+          required: [logo_status, public]
+          properties:
+            logo_status: { type: string, enum: [none, ready, unavailable] }
+            public: { $ref: "#/components/schemas/PublicBranding" }
     PanelTlsConfig:
       type: object
       additionalProperties: false
@@ -1358,7 +1468,13 @@ components:
             - rate_limited
             - session_expired
             - csrf_rejected
+            - auth_disabled
             - internal_error
+            - branding_invalid_title
+            - branding_invalid_mode
+            - branding_invalid_path
+            - branding_logo_unreadable
+            - branding_invalid_image
             - not_found
             - telemt_unreachable
             - capability_absent
@@ -1410,7 +1526,7 @@ components:
           description: >
             Machine code. Panel codes actually emitted today (grepped from every
             WriteError call site): bad_request, invalid_credentials, rate_limited,
-            session_expired, csrf_rejected, internal_error, not_found,
+            session_expired, csrf_rejected, auth_disabled, internal_error, not_found,
             telemt_unreachable, capability_absent, capability_unavailable,
             manual_restart_required, update_locked, sublink_unavailable,
             log_tail_unavailable, log_stream_unavailable, log_source_error,
@@ -1814,9 +1930,9 @@ components:
         revision: { type: string }
         sections:
           type: object
-          additionalProperties: { type: [object, "null"], additionalProperties: true }
+          additionalProperties: {}
           description: >
-            Map of section name → that section's JSON, straight from Telemt (integers
+            Map of section name → that section's JSON, including arrays such as upstreams, straight from Telemt (integers
             preserved). Open-ended: a section a newer Telemt adds (`web`, since 3.5.3)
             passes through unchanged rather than being dropped, and a section value the
             panel received as null is passed on as null rather than synthesized into {}.

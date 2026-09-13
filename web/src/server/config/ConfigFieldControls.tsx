@@ -43,7 +43,7 @@ export function ConfigFieldRow({ instance, advanced, groupName, onChange }: {
   const label = configFieldLabel(field, copy.labels as Record<string, string>);
   const requiresRestart = field.apply.includes("restart");
   return (
-    <div className="grid min-h-[74px] gap-2 border-b border-border/75 py-3.5 sm:grid-cols-[minmax(180px,1fr)_minmax(170px,225px)] sm:items-center sm:gap-4">
+    <div className="grid min-h-[74px] max-w-[960px] gap-2 border-b border-border/75 py-3.5 sm:grid-cols-[minmax(180px,1fr)_minmax(170px,225px)] sm:items-center sm:gap-4">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-sm font-semibold text-text">{label}</span>

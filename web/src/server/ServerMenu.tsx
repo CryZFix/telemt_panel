@@ -1,12 +1,13 @@
 import type { ComponentType, ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useLocale, useStrings, type Dict } from "../i18n";
+import { fill, useLocale, useStrings, type Dict } from "../i18n";
 import { countLabel, formatNumber, plural } from "../i18n/plural";
 import { useDisplayMode } from "../display-mode";
 import { useTheme } from "../lib/useTheme";
 import { useSnapshot } from "../realtime";
-import type { SecurityTopic } from "../realtime/topics";
+import type { RuntimeTopic, SecurityTopic } from "../realtime/topics";
+import type { TopicSnapshot } from "../realtime/types";
 import {
   getAutoUpdateOptions,
   getHostOptions,
@@ -22,6 +23,10 @@ import {
   IconShield,
   IconUpgrade,
   IconWrench,
+  IconServer,
+  IconSwap,
+  IconRoute,
+  IconTelegramOutline,
   type IconProps,
 } from "../ui/icons";
 import {
@@ -29,7 +34,8 @@ import {
   hostCapabilityCount,
   newestAvailableRelease,
   summarizeServerConfig,
-  type ServerRouteMode,
+  summarizeEgress,
+  runtimeRouteMode,
 } from "./hub.helpers";
 
 type CardTone = "blue" | "green" | "amber" | "neutral" | "violet";
@@ -46,6 +52,7 @@ export function ServerMenu() {
   const hostQuery = useQuery(getHostOptions());
   const sessionsQuery = useQuery(listSessionsOptions({ query: { limit: 1 } }));
   const security = useSnapshot<SecurityTopic>("security");
+  const runtime = useSnapshot<RuntimeTopic>("runtime");
 
   const hub = s.server.hub;
   const targets = updatesQuery.data?.targets;
@@ -168,7 +175,7 @@ export function ServerMenu() {
           tone="blue"
           wide
         >
-          <RouteSummary mode={config.routeMode} labels={hub.route} />
+          <RouteSummary snapshot={runtime} labels={hub.route} />
           <div className="server-hub-card-facts">
             <Fact ok={config.transport !== "unknown"}>
               {config.transport === "unknown" ? hub.noData : hub.transport[config.transport]}
@@ -336,14 +343,29 @@ function HubCard({ to, title, eyebrow, Icon, tone, state, wide = false, attentio
   );
 }
 
-function RouteSummary({ mode, labels }: { mode: ServerRouteMode; labels: Dict["server"]["hub"]["route"] }) {
-  if (mode === "direct") {
-    return <div className="server-hub-route is-direct"><div><span>{labels.clients}</span><i /><strong>{labels.direct}</strong><i /><span>DC</span></div></div>;
-  }
+function RouteSummary({ snapshot, labels }: { snapshot: TopicSnapshot<RuntimeTopic>; labels: Dict["server"]["hub"]["route"] }) {
+  const s = useStrings();
+  const fresh = !snapshot.stale && !snapshot.error;
+  const mode = runtimeRouteMode(fresh ? snapshot.data?.gates : null);
+  const egress = summarizeEgress(fresh ? snapshot.data?.upstream_quality : null);
+  const poolName = !egress ? "—" : egress.total === 0 ? labels.empty : egress.routes.map(({ type }) => labels.types[type]).join(" + ");
+  const availability = egress ? fill(labels.poolHealth, { healthy: formatNumber(s, egress.healthy), total: formatNumber(s, egress.total) }) : labels.unknown;
+  const poolHint = !fresh ? labels.stale : `${labels.pool}: ${poolName}. ${availability}${egress?.scoped ? `. ${labels.scoped}: ${formatNumber(s, egress.scoped)}` : ""}. ${labels.poolNote}`;
   return (
-    <div className={`server-hub-route${mode === "unknown" ? " is-unknown" : ""}`}>
-      <div><span>{labels.clients}</span><i /><strong>{mode === "unknown" ? "—" : "ME"}</strong><i /><span>DC</span></div>
-      {mode === "me_fallback" && <small><b>{labels.fallback}</b><em>{labels.direct}</em></small>}
+    <div className="server-hub-route" data-testid="server-config-route" data-mode={mode} data-no-flow={!fresh || mode === "unknown" || !egress || egress.total === 0}>
+      <span className="server-route-track" aria-hidden="true" />
+      <ol className="server-route-stages" aria-label={labels.livePath}>
+        <li><span className="server-route-orb"><IconServer strokeWidth={1.5} /></span><strong>Telemt</strong></li>
+        <li className="server-route-pool" data-attention={Boolean(egress && egress.healthy < egress.total)} title={poolHint} aria-label={poolHint}>
+          <span className="server-route-orb"><IconSwap strokeWidth={1.5} /></span>
+          <strong data-testid="server-runtime-pool">{poolName}</strong>
+        </li>
+        <li className="server-route-mode" title={!fresh ? labels.stale : mode === "unknown" ? labels.unknown : labels.current}>
+          <span className="server-route-orb"><IconRoute strokeWidth={1.5} /></span>
+          <strong data-testid="server-runtime-mode">{labels.modes[mode]}</strong>
+        </li>
+        <li><span className="server-route-orb"><IconTelegramOutline strokeWidth={1.5} /></span><strong>Telegram</strong></li>
+      </ol>
     </div>
   );
 }

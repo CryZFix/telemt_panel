@@ -12,31 +12,25 @@ import type { UsersTopicQuotaEntry, UsersTopicUser } from "../realtime/topics";
 export type UserStatus = "disabled" | "expired" | "quota_exhausted" | "not_in_runtime" | "active";
 
 export interface UserQuotaView {
-  usedBytes: number;
+  usedBytes: number | null;
   /** null means unlimited — no quota entry and no data_quota_bytes limit. */
   limitBytes: number | null;
 }
 
-// getUserQuota picks the quota figures to show: an entry in the "users"
-// topic's quota map (present only when the quota capability is on AND this
-// user has a quota configured — httpapi's quotaListOrDegrade/buildUserResponse
-// applies the same rule) always wins, since it's Telemt's own tracked usage
-// counter; otherwise this falls back to the best signal actually available —
-// the user's own data_quota_bytes limit against total_octets (cumulative
-// traffic since the user was created, not since a quota reset, but the
-// closest approximation without the quota capability).
+// Quota usage is not total_octets. Missing observations remain unknown,
+// including during API failure; otherwise reset could show false exhaustion.
 export function getUserQuota(
   user: Pick<UsersTopicUser, "data_quota_bytes" | "total_octets">,
   quotaEntry: UsersTopicQuotaEntry | undefined,
 ): UserQuotaView {
   if (quotaEntry) {
-    return { usedBytes: quotaEntry.used_bytes, limitBytes: quotaEntry.data_quota_bytes };
+    return { usedBytes: quotaEntry.used_bytes, limitBytes: quotaEntry.data_quota_bytes || null };
   }
-  return { usedBytes: user.total_octets, limitBytes: user.data_quota_bytes ?? null };
+  return { usedBytes: null, limitBytes: user.data_quota_bytes || null };
 }
 
 export function isQuotaExhausted(quota: UserQuotaView): boolean {
-  return quota.limitBytes !== null && quota.usedBytes >= quota.limitBytes;
+  return quota.limitBytes !== null && quota.limitBytes > 0 && quota.usedBytes !== null && quota.usedBytes >= quota.limitBytes;
 }
 
 // computeUserStatus is the ONE status computation every screen (list card,

@@ -107,12 +107,17 @@ type passkeyInfo struct {
 
 // meResponse mirrors the /api/auth/me 200 response.
 type meResponse struct {
-	Username string        `json:"username"`
-	Passkeys []passkeyInfo `json:"passkeys"`
+	AuthDisabled bool          `json:"auth_disabled"`
+	Username     string        `json:"username"`
+	Passkeys     []passkeyInfo `json:"passkeys"`
 }
 
 // handleMe implements GET /api/auth/me.
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.Auth.Disabled {
+		writeJSON(w, http.StatusOK, meResponse{Username: "anonymous", AuthDisabled: true, Passkeys: []passkeyInfo{}})
+		return
+	}
 	username, _ := auth.UsernameFromContext(r.Context())
 	credentials, err := s.st.ListWebAuthnCredentials()
 	if err != nil {

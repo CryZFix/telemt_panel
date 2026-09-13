@@ -63,9 +63,9 @@ test("service-worker reload keeps the interface usable without preload warnings"
   await page.reload({ waitUntil: "networkidle" });
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
   await page.getByRole("button", { name: "Создать", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.getByTestId("user-form-submit")).toBeVisible();
+  await page.getByRole("link", { name: /К списку пользователей/ }).click();
+  await expect(page.getByTestId("user-form-submit")).not.toBeVisible();
   // Chrome reports unused preloads asynchronously after load.
   await page.waitForTimeout(15_000);
   expect(errors).toEqual([]);

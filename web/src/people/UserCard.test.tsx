@@ -3,6 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UsersTopicUser } from "../realtime/topics";
 import { UserCard } from "./UserCard";
+import type {SwipeSide} from "./useUserRowGestures";
 
 const user: UsersTopicUser = {
   username: "alice",
@@ -45,19 +46,19 @@ describe("UserCard gestures", () => {
 
   function renderCard({ initialSwipeOpen = false, onOpen = vi.fn(), onActions = vi.fn() } = {}) {
     function Harness() {
-      const [swipeOpen, setSwipeOpen] = useState(initialSwipeOpen);
+      const [swipeSide, setSwipeSide] = useState<SwipeSide>(initialSwipeOpen?"left":null);
       return (
         <UserCard
           user={user}
           quotaEntry={undefined}
           now={Date.now()}
           gesturesEnabled
-          swipeOpen={swipeOpen}
+          swipeSide={swipeSide}
           onOpen={onOpen}
-          onAccess={vi.fn()}
-          onActions={() => { setSwipeOpen(false); onActions(); }}
-          onSwipeOpen={() => setSwipeOpen(true)}
-          onSwipeClose={() => setSwipeOpen(false)}
+          onResetQuota={vi.fn()}
+          onToggle={vi.fn()}
+          onActions={() => { setSwipeSide(null); onActions(); }}
+          onSwipeChange={setSwipeSide}
         />
       );
     }
@@ -71,9 +72,9 @@ describe("UserCard gestures", () => {
     const onActions = vi.fn();
     renderCard({ initialSwipeOpen: true, onOpen, onActions });
 
-    const row = container.querySelector<HTMLElement>(".people-user-row")!;
-    const shell = container.querySelector<HTMLElement>(".people-user-shell")!;
-    expect(shell.classList.contains("is-swiped")).toBe(true);
+    const row = container.querySelector<HTMLElement>(".user-row-face")!;
+    const shell = container.querySelector<HTMLElement>(".user-row-shell")!;
+    expect(shell.dataset["swipe"]).toBe("left");
 
     act(() => row.dispatchEvent(pointerEvent("pointerdown", 220, 100)));
     act(() => vi.advanceTimersByTime(500));
@@ -82,28 +83,28 @@ describe("UserCard gestures", () => {
     act(() => row.dispatchEvent(pointerEvent("pointerup", 120, 100)));
     act(() => row.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
-    expect(shell.classList.contains("is-swiped")).toBe(false);
-    expect(container.querySelector(".people-swipe-actions")?.getAttribute("aria-hidden")).toBe("true");
+    expect(shell.dataset["swipe"]).toBe("closed");
+    expect(container.querySelector(".user-side-quota")?.getAttribute("aria-hidden")).toBe("true");
     expect(onOpen).not.toHaveBeenCalled();
   });
 
   it("opens quick actions after a horizontal swipe without also opening the user", () => {
     const { onOpen } = renderCard();
-    const row = container.querySelector<HTMLElement>(".people-user-row")!;
-    const shell = container.querySelector<HTMLElement>(".people-user-shell")!;
+    const row = container.querySelector<HTMLElement>(".user-row-face")!;
+    const shell = container.querySelector<HTMLElement>(".user-row-shell")!;
 
     act(() => row.dispatchEvent(pointerEvent("pointerdown", 220, 100)));
     act(() => row.dispatchEvent(pointerEvent("pointermove", 120, 102)));
     act(() => row.dispatchEvent(pointerEvent("pointerup", 120, 102)));
 
-    expect(shell.classList.contains("is-swiped")).toBe(true);
-    expect(container.querySelector(".people-swipe-actions")?.getAttribute("aria-hidden")).toBe("false");
+    expect(shell.dataset["swipe"]).toBe("left");
+    expect(container.querySelector(".user-side-quota")?.getAttribute("aria-hidden")).toBe("false");
     expect(onOpen).not.toHaveBeenCalled();
   });
 
   it("keeps the ordinary click as the discoverable primary action", () => {
     const { onOpen } = renderCard();
-    const row = container.querySelector<HTMLElement>(".people-user-row")!;
+    const row = container.querySelector<HTMLElement>(".user-identity")!;
 
     act(() => row.click());
 

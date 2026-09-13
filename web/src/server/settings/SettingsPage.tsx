@@ -13,6 +13,7 @@ import { IconChevronRight, IconLogout } from "../../ui/icons";
 import { pushToast } from "../../ui/Toast";
 import { apiErrorCode, apiErrorMessage } from "../../people/apiError";
 import { useLogout } from "../../auth/useLogout";
+import { AuthDisabledDetails } from "../../auth/AuthDisabledNotice";
 import { formatAuditTimestamp } from "../../journal/timestamp.helpers";
 import {
   listSessionsInfiniteQueryKey,
@@ -25,6 +26,7 @@ import {
 import type { SessionInfo } from "../../lib/api/generated/types.gen";
 import { sessionDeviceLabel } from "./sessions.helpers";
 import { InterfacePreferences } from "./InterfacePreferences";
+import { BrandingSettings } from "./BrandingSettings";
 import { SessionSheet } from "./SessionSheet";
 import { SessionIcon as SessionGlyph } from "./SessionIcon";
 import { StorageSettings } from "./StorageSettings";
@@ -55,8 +57,9 @@ function MiniInterfacePreview() {
 export function SettingsPage() {
   const s = useStrings();
   const queryClient = useQueryClient();
-  const sessionsQuery = useQuery(listSessionsOptions({ query: { limit: 4 } }));
   const meQuery = useQuery(getMeOptions());
+  const authDisabled = meQuery.data?.auth_disabled === true;
+  const sessionsQuery = useQuery({...listSessionsOptions({ query: { limit: 4 } }), enabled: !!meQuery.data && !authDisabled});
   const logout = useLogout();
   const [theme] = useTheme();
   const locale = useLocalePreference();
@@ -138,7 +141,7 @@ export function SettingsPage() {
           </div>
         </div>
 
-        <dl className="grid grid-cols-3 divide-x divide-border border-t border-border">
+        {!authDisabled && <dl className="grid grid-cols-3 divide-x divide-border border-t border-border">
           <div className="min-w-0 px-3 py-3 sm:px-4">
             <dt className="text-[9px] font-extrabold uppercase tracking-[0.08em] text-text-faint">
               {s.server.settings.activeSessionsLabel}
@@ -170,11 +173,11 @@ export function SettingsPage() {
               {s.server.settings.localOnly}
             </small>
           </div>
-        </dl>
+        </dl>}
       </section>
 
       <div className="grid items-start gap-2.5 lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,0.65fr)]">
-        <section
+        {authDisabled ? <AuthDisabledDetails /> : <section
           data-testid="settings-sessions"
           className="overflow-hidden rounded-xl bg-surface"
           aria-labelledby="sessions-title"
@@ -299,16 +302,17 @@ export function SettingsPage() {
               {s.server.settings.noSessionsFound}
             </div>
           )}
-        </section>
+        </section>}
 
         <div className="flex min-w-0 flex-col gap-2.5">
-          <PasskeySettings passkeys={meQuery.data?.passkeys ?? []} />
+          {!authDisabled && <PasskeySettings passkeys={meQuery.data?.passkeys ?? []} />}
           <TransportStatus />
           <TransportStatus target="subscription" />
 
           <InterfacePreferences />
+          <BrandingSettings />
 
-          <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-surface p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+          {!authDisabled && <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-surface p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
             <span
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-error/10 text-error"
               aria-hidden="true"
@@ -334,7 +338,7 @@ export function SettingsPage() {
             >
               {s.server.settings.signOut}
             </Button>
-          </section>
+          </section>}
         </div>
       </div>
 

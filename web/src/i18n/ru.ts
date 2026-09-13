@@ -88,6 +88,10 @@ export const ru = {
     byteUnits: ["Б", "КБ", "МБ", "ГБ", "ТБ"],
   },
   auth: {
+    disabledTitle: "Вход в панель отключён",
+    disabledNote: "Все, кто может подключиться к панели, имеют полный доступ администратора. Ограничьте доступ локальной сетью, firewall или reverse proxy с собственной авторизацией. Панель не проверяет mTLS за прокси.",
+    disabledRestore: "Для возврата защиты укажите disabled = false в секции [auth] конфигурации панели и перезапустите её. Сохранённые пароль и passkey не удаляются.",
+    disabledAddress: "Вход отключён в конфигурации. Откройте панель по IP или домену из public_url. Для домена проверьте public_url и trusted_proxies; форма входа в этом режиме недоступна.",
     username: "Имя пользователя",
     password: "Пароль",
     signIn: "Войти",
@@ -136,6 +140,22 @@ export const ru = {
     placeholderDescription: "Экран появится в одной из следующих задач.",
   },
   people: {
+    workspace: {
+      overview:"Обзор", access:"Доступ", ips:"История IP", settings:"Настройки", back:"К списку пользователей",
+      quickLinks:"Быстрые ссылки", format:"Формат ссылок", formatHint:"Меняет формат только для этого пользователя. WEB всегда tg://webproxy.",
+      primary:"Основной", primaryLink:"Основная ссылка из настроек Telemt", primaryHint:"Быстрые кнопки всегда используют основной вариант из настроек Telemt.",
+      primaryUnavailable:"Основная ссылка недоступна", webFormat:"WEB использует tg://webproxy без аналога t.me. Нужна поддержка WEB-прокси клиентом Telegram.",
+      webSecretUnavailable:"Telemt не вернул доступный секрет для WEB-ссылки. Панель не может восстановить его без корректной Classic/DD/EE-ссылки.",
+      linkKind:"Тип подключения", linkVariant:"Адрес / домен / профиль", showLink:"Показать выбранную ссылку",
+      quota:"Квота трафика", usedQuota:"Расход квоты", resetQuota:"Сбросить квоту", resetNote:"Лимит, учтённый трафик и история IP сохранятся.",
+      quotaUnknown:"Данные квоты недоступны", exhausted:"Квота исчерпана", unlimited:"Без ограничения",
+      counters:"Счётчики", account:"Пользователь", accessGroup:"Доступ", openPerson:"Страница пользователя", openNote:"Трафик, адреса и настройки",
+      accessNote:"Адрес, маскировка и WEB-профили", subscription:"Страница подписки", subscriptionNote:"Получить ссылку для пользователя",
+      quotaNote:"Обнулить расход, сохранив лимит", trafficNote:"Очистить накопленную статистику панели", blockNote:"Запретить подключения без удаления", enableNote:"Снова разрешить подключения", deleteNote:"С подтверждением",
+      swipeHint:"← Квота · Доступ → · удержание — меню", gestureHelp:"Свайп влево — квота и сброс; вправо — управление доступом. Удержание — меню, нажатие — страница пользователя.",
+      readOnly:"Telemt работает в режиме чтения", stale:"Нет свежих данных", totalTraffic:"Учтённый трафик", totalNote:"С начала учёта панелью", conditions:"Условия доступа",
+      newUser:"Новый пользователь", editUser:"Настройки пользователя", dirty:"Есть несохранённые изменения", discard:"Отменить изменения?", discardNote:"Несохранённые изменения будут потеряны.", stay:"Остаться", leave:"Отменить изменения",
+    },
     title: "Пользователи",
     accessManagement: "Управление доступом",
     tableUser: "Пользователь",
@@ -662,6 +682,8 @@ export const ru = {
       // счётчиках, которые сейчас не растут и потому не считаются проблемой.
       lifetimeCounters: "Счётчики за всё время: {value} (см. Соединения)",
       more: "ещё",
+      showMore: "Показать все проблемы",
+      showLess: "Свернуть список",
     },
     activeSessions: {
       current: "Текущие соединения",
@@ -2674,9 +2696,17 @@ export const ru = {
         },
       },
       route: {
-        clients: "Клиенты",
-        fallback: "fallback",
-        direct: "direct",
+        livePath: "Telemt — пул апстримов — текущий режим — Telegram",
+        pool: "Пул апстримов",
+        unknown: "Нет данных",
+        empty: "Пул пуст",
+        current: "Сейчас",
+        poolHealth: "Доступно {healthy} из {total}",
+        poolNote: "Пул и доступность — из runtime. Выбранный апстрим каждого соединения API не раскрывает.",
+        stale: "Нет свежих runtime-данных — состояние не подменяется конфигурацией.",
+        scoped: "В том числе со scopes",
+        modes: { me: "ME", direct: "Direct", fallback: "Fallback", unknown: "—" },
+        types: { direct: "Напрямую", socks4: "SOCKS4", socks5: "SOCKS5", shadowsocks: "Shadowsocks", unknown: "Неизвестный тип" },
       },
       transport: {
         tls: "TLS-транспорт",
@@ -3592,6 +3622,17 @@ export const ru = {
       created: "Создана",
       displayTitle: "Отображение",
       interfaceTitle: "Интерфейс",
+      branding: {
+        title: "Оформление панели", scope: "Для всех устройств", edit: "Настроить оформление",
+        note: "Название и логотип на экране входа, в меню и вкладке браузера.",
+        name: "Название панели", logo: "Логотип", default: "Стандартный", custom: "Свой файл", hidden: "Без логотипа",
+        path: "Путь к файлу на сервере", pathNote: "Абсолютный путь внутри системы или контейнера панели. Файл должен быть доступен на чтение пользователю службы.",
+        limits: "PNG, WebP или JPEG · до 5 МиБ · до 4096 px по стороне и 8 Мп.",
+        reload: "После замены файла по тому же пути сохраните настройки ещё раз. Перезапуск панели не нужен.",
+        unavailable: "Логотип не загружен. Проверьте файл и права доступа, затем сохраните настройки повторно. Пока изображение скрыто.",
+        save: "Сохранить оформление", reset: "Вернуть стандартное", saved: "Оформление сохранено",
+        preview: "Текущее оформление", privacy: "Меняется оформление, а не технические названия Telemt в диагностике. Это не способ скрыть тип приложения от технического анализа.",
+      },
       storageEyebrow: "Память наблюдаемости",
       storageReduceTitle: "Сократить срок хранения?",
       storageReduceNote: "После сохранения данные старше выбранного срока будут удаляться. Вернуть их увеличением срока нельзя. Изменения (дней):",
@@ -3702,6 +3743,11 @@ export const ru = {
       "Клик копирует через Clipboard API (HTTPS/localhost), иначе через execCommand, иначе выделяет значение и показывает тост «{manual}» — см. src/lib/copyText.ts.",
   },
   errors: {
+    branding_invalid_title: "Введите название от 1 до 80 символов без переносов строки.",
+    branding_invalid_mode: "Выберите режим логотипа.",
+    branding_invalid_path: "Укажите абсолютный путь к файлу на сервере.",
+    branding_logo_unreadable: "Не удалось прочитать файл. Проверьте путь и права доступа пользователя службы панели.",
+    branding_invalid_image: "Нужен корректный PNG, WebP или JPEG: до 5 МиБ, 4096 px по стороне и 8 Мп.",
     conflict: "Другая операция ещё выполняется. Дождитесь её завершения и повторите попытку.",
     // Panel-native codes.
     bad_request: "Некорректный запрос.",
@@ -3740,7 +3786,8 @@ export const ru = {
     log_source_error: "Не удалось подключиться к источнику логов.",
     // Reserved for milestones not yet implemented, kept so a stray response
     // from a partially-rolled-out backend still shows something sensible.
-    invalid_webauthn_origin: "Passkeys нельзя использовать с этого адреса панели.",
+    invalid_webauthn_origin: "Адрес браузера не совпадает с адресом, определённым панелью. За HTTPS-прокси проверьте trusted_proxies и заголовки X-Forwarded-Proto/Host. После исправления перезапустите панель и повторите.",
+    auth_disabled: "Авторизация отключена в конфигурации панели. Управление сеансами и passkey недоступно.",
     invalid_webauthn_challenge: "Запрос passkey истёк или уже использован. Начните заново.",
     invalid_webauthn_response: "Не удалось проверить ответ устройства.",
     webauthn_credential_exists: "Этот passkey уже зарегистрирован.",
@@ -3808,6 +3855,7 @@ export const ru = {
   // errors table's completeness test walks Error.code — see
   // journal/auditActions.test.ts's own list of backend call sites).
   auditActions: {
+    "branding.settings_change": "Изменено оформление панели",
     "geoip.settings_change": "Изменены настройки географии IP",
     "geoip.update": "Запрошено обновление баз GeoIP",
     login: "Вход",

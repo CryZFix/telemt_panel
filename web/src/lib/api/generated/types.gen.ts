@@ -4,6 +4,27 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type BrandingConfig = {
+    title: string;
+    logo_mode: 'default' | 'custom' | 'hidden';
+    /**
+     * Absolute server path; required for custom mode. PNG/WebP/JPEG
+     */
+    logo_path: string;
+};
+
+export type PublicBranding = {
+    title: string;
+    logo_mode: 'default' | 'custom' | 'hidden';
+    logo_url: string;
+    icon_url: string;
+};
+
+export type BrandingSettings = BrandingConfig & {
+    logo_status: 'none' | 'ready' | 'unavailable';
+    public: PublicBranding;
+};
+
 export type PanelTlsConfig = {
     mode: 'http' | 'certificate' | 'acme';
     cert_file?: string;
@@ -89,10 +110,10 @@ export type PanelTlsStatus = {
 
 export type Error = {
     /**
-     * Machine code. Panel codes actually emitted today (grepped from every WriteError call site): bad_request, invalid_credentials, rate_limited, session_expired, csrf_rejected, internal_error, not_found, telemt_unreachable, capability_absent, capability_unavailable, manual_restart_required, update_locked, sublink_unavailable, log_tail_unavailable, log_stream_unavailable, log_source_error, invalid_webauthn_origin, invalid_webauthn_challenge, invalid_webauthn_response, webauthn_credential_exists, passkey_unavailable, invalid_toml, invalid_config_path, config_unset_unsupported, no_changes, toml_projection_failed. capability_absent (501) vs capability_unavailable (503) are deliberately distinct, not aliases: capability_absent means the route itself doesn't exist on this Telemt build (a bare 404/405 with no error envelope — detected reactively, after attempting the call: rotate-secret, enable/disable, POST /api/telemt/reload, GET /api/telemt/reload/{id}); capability_unavailable means the route exists but the feature behind it is switched off on this Telemt — either known up front from the SDK's cached Capabilities probe (GET/PATCH /api/telemt/config, config_api) or reported by the response itself (GET /api/telemt/tls-fingerprints, whose enabled:false means runtime_edge_enabled is off; read from the response rather than probed so an unreachable Telemt still maps to 502 telemt_unreachable). Reserved for milestones not yet implemented: telemt_auth_failed (superseded on /api/telemt/info by a reachable:false body, not an error status — kept here for /api/telemt/config, M3). A well-formed Telemt *APIError whose status is 4xx and isn't otherwise mapped above is passed through verbatim with Telemt's own code — notably user_exists, last_user_forbidden, read_only, revision_conflict, reload_in_progress, reload_not_found, ambiguous_listeners (the latter two absent from Telemt's own documented error-code table but confirmed against its source, M3), plus any other code in Telemt's own set (07-telemt-sdk.md): bad_request, access_not_editable, section_not_editable, field_not_editable, unauthorized, forbidden, method_not_allowed, config_patch_not_atomic, payload_too_large, api_disabled, maestro_unavailable — except access_not_editable/section_not_editable/field_not_editable/ config_patch_not_atomic/ambiguous_listeners on PATCH /api/telemt/config, which the panel remaps to HTTP 422 regardless of Telemt's own status. The WEB group (Telemt >= 3.5.3, internal/telemt/types_web.go) adds web_runtime_mismatch, web_issuance_enabled, web_operation_in_progress, web_snapshot_busy, web_session_not_found, web_operation_not_found and unsupported_media_type; web_runtime_unavailable is listed because it is Telemt's own code, but the panel remaps it to capability_unavailable (rule R5) so the closed-capability gate is drawn instead of an error. Every code in this enum must carry a message in BOTH dictionaries — web/src/i18n/i18n.test.ts walks this list.
+     * Machine code. Panel codes actually emitted today (grepped from every WriteError call site): bad_request, invalid_credentials, rate_limited, session_expired, csrf_rejected, auth_disabled, internal_error, not_found, telemt_unreachable, capability_absent, capability_unavailable, manual_restart_required, update_locked, sublink_unavailable, log_tail_unavailable, log_stream_unavailable, log_source_error, invalid_webauthn_origin, invalid_webauthn_challenge, invalid_webauthn_response, webauthn_credential_exists, passkey_unavailable, invalid_toml, invalid_config_path, config_unset_unsupported, no_changes, toml_projection_failed. capability_absent (501) vs capability_unavailable (503) are deliberately distinct, not aliases: capability_absent means the route itself doesn't exist on this Telemt build (a bare 404/405 with no error envelope — detected reactively, after attempting the call: rotate-secret, enable/disable, POST /api/telemt/reload, GET /api/telemt/reload/{id}); capability_unavailable means the route exists but the feature behind it is switched off on this Telemt — either known up front from the SDK's cached Capabilities probe (GET/PATCH /api/telemt/config, config_api) or reported by the response itself (GET /api/telemt/tls-fingerprints, whose enabled:false means runtime_edge_enabled is off; read from the response rather than probed so an unreachable Telemt still maps to 502 telemt_unreachable). Reserved for milestones not yet implemented: telemt_auth_failed (superseded on /api/telemt/info by a reachable:false body, not an error status — kept here for /api/telemt/config, M3). A well-formed Telemt *APIError whose status is 4xx and isn't otherwise mapped above is passed through verbatim with Telemt's own code — notably user_exists, last_user_forbidden, read_only, revision_conflict, reload_in_progress, reload_not_found, ambiguous_listeners (the latter two absent from Telemt's own documented error-code table but confirmed against its source, M3), plus any other code in Telemt's own set (07-telemt-sdk.md): bad_request, access_not_editable, section_not_editable, field_not_editable, unauthorized, forbidden, method_not_allowed, config_patch_not_atomic, payload_too_large, api_disabled, maestro_unavailable — except access_not_editable/section_not_editable/field_not_editable/ config_patch_not_atomic/ambiguous_listeners on PATCH /api/telemt/config, which the panel remaps to HTTP 422 regardless of Telemt's own status. The WEB group (Telemt >= 3.5.3, internal/telemt/types_web.go) adds web_runtime_mismatch, web_issuance_enabled, web_operation_in_progress, web_snapshot_busy, web_session_not_found, web_operation_not_found and unsupported_media_type; web_runtime_unavailable is listed because it is Telemt's own code, but the panel remaps it to capability_unavailable (rule R5) so the closed-capability gate is drawn instead of an error. Every code in this enum must carry a message in BOTH dictionaries — web/src/i18n/i18n.test.ts walks this list.
      *
      */
-    code: 'bad_request' | 'tls_invalid_candidate' | 'tls_manual_required' | 'tls_prepare_busy' | 'tls_prepare_unavailable' | 'tls_listener_unavailable' | 'tls_challenge_unavailable' | 'tls_cache_unavailable' | 'tls_certificate_invalid' | 'tls_certificate_untrusted' | 'tls_acquisition_failed' | 'tls_prepare_failed' | 'tls_prepare_timeout' | 'tls_config_changed' | 'tls_receipt_invalid' | 'tls_save_failed' | 'tls_restart_not_pending' | 'tls_restart_failed' | 'conflict' | 'confirmation_required' | 'invalid_credentials' | 'rate_limited' | 'session_expired' | 'csrf_rejected' | 'internal_error' | 'not_found' | 'telemt_unreachable' | 'capability_absent' | 'capability_unavailable' | 'manual_restart_required' | 'update_locked' | 'sublink_unavailable' | 'log_tail_unavailable' | 'log_stream_unavailable' | 'log_source_error' | 'invalid_webauthn_origin' | 'invalid_webauthn_challenge' | 'invalid_webauthn_response' | 'webauthn_credential_exists' | 'passkey_unavailable' | 'telemt_auth_failed' | 'user_exists' | 'last_user_forbidden' | 'read_only' | 'revision_conflict' | 'invalid_toml' | 'invalid_config_path' | 'config_unset_unsupported' | 'no_changes' | 'toml_projection_failed' | 'reload_in_progress' | 'reload_not_found' | 'ambiguous_listeners' | 'access_not_editable' | 'section_not_editable' | 'field_not_editable' | 'unauthorized' | 'forbidden' | 'method_not_allowed' | 'config_patch_not_atomic' | 'payload_too_large' | 'api_disabled' | 'maestro_unavailable' | 'unsupported_media_type' | 'web_runtime_unavailable' | 'web_snapshot_busy' | 'web_runtime_mismatch' | 'web_issuance_enabled' | 'web_operation_in_progress' | 'web_session_not_found' | 'web_operation_not_found' | 'web_vhost_not_found' | 'web_profile_required';
+    code: 'bad_request' | 'tls_invalid_candidate' | 'tls_manual_required' | 'tls_prepare_busy' | 'tls_prepare_unavailable' | 'tls_listener_unavailable' | 'tls_challenge_unavailable' | 'tls_cache_unavailable' | 'tls_certificate_invalid' | 'tls_certificate_untrusted' | 'tls_acquisition_failed' | 'tls_prepare_failed' | 'tls_prepare_timeout' | 'tls_config_changed' | 'tls_receipt_invalid' | 'tls_save_failed' | 'tls_restart_not_pending' | 'tls_restart_failed' | 'conflict' | 'confirmation_required' | 'invalid_credentials' | 'rate_limited' | 'session_expired' | 'csrf_rejected' | 'auth_disabled' | 'internal_error' | 'branding_invalid_title' | 'branding_invalid_mode' | 'branding_invalid_path' | 'branding_logo_unreadable' | 'branding_invalid_image' | 'not_found' | 'telemt_unreachable' | 'capability_absent' | 'capability_unavailable' | 'manual_restart_required' | 'update_locked' | 'sublink_unavailable' | 'log_tail_unavailable' | 'log_stream_unavailable' | 'log_source_error' | 'invalid_webauthn_origin' | 'invalid_webauthn_challenge' | 'invalid_webauthn_response' | 'webauthn_credential_exists' | 'passkey_unavailable' | 'telemt_auth_failed' | 'user_exists' | 'last_user_forbidden' | 'read_only' | 'revision_conflict' | 'invalid_toml' | 'invalid_config_path' | 'config_unset_unsupported' | 'no_changes' | 'toml_projection_failed' | 'reload_in_progress' | 'reload_not_found' | 'ambiguous_listeners' | 'access_not_editable' | 'section_not_editable' | 'field_not_editable' | 'unauthorized' | 'forbidden' | 'method_not_allowed' | 'config_patch_not_atomic' | 'payload_too_large' | 'api_disabled' | 'maestro_unavailable' | 'unsupported_media_type' | 'web_runtime_unavailable' | 'web_snapshot_busy' | 'web_runtime_mismatch' | 'web_issuance_enabled' | 'web_operation_in_progress' | 'web_session_not_found' | 'web_operation_not_found' | 'web_vhost_not_found' | 'web_profile_required';
     message: string;
 };
 
@@ -433,13 +454,11 @@ export type WebControlOperationStatus = {
 export type TelemtConfig = {
     revision: string;
     /**
-     * Map of section name → that section's JSON, straight from Telemt (integers preserved). Open-ended: a section a newer Telemt adds (`web`, since 3.5.3) passes through unchanged rather than being dropped, and a section value the panel received as null is passed on as null rather than synthesized into {}.
+     * Map of section name → that section's JSON, including arrays such as upstreams, straight from Telemt (integers preserved). Open-ended: a section a newer Telemt adds (`web`, since 3.5.3) passes through unchanged rather than being dropped, and a section value the panel received as null is passed on as null rather than synthesized into {}.
      *
      */
     sections: {
-        [key: string]: {
-            [key: string]: unknown;
-        } | null;
+        [key: string]: unknown;
     };
 };
 
@@ -1094,6 +1113,125 @@ export type GeoIpResult = {
 
 export type Username = string;
 
+export type GetPublicBrandingData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/branding';
+};
+
+export type GetPublicBrandingResponses = {
+    /**
+     * Login and panel appearance
+     */
+    200: PublicBranding;
+};
+
+export type GetPublicBrandingResponse = GetPublicBrandingResponses[keyof GetPublicBrandingResponses];
+
+export type GetBrandingLogoData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/branding/logo';
+};
+
+export type GetBrandingLogoErrors = {
+    /**
+     * No custom logo available
+     */
+    404: unknown;
+};
+
+export type GetBrandingLogoResponses = {
+    /**
+     * PNG, JPEG or WebP logo
+     */
+    200: Blob | File;
+};
+
+export type GetBrandingLogoResponse = GetBrandingLogoResponses[keyof GetBrandingLogoResponses];
+
+export type GetBrandingIconData = {
+    body?: never;
+    path?: never;
+    query?: {
+        size?: 192 | 512;
+    };
+    url: '/api/branding/icon';
+};
+
+export type GetBrandingIconResponses = {
+    /**
+     * PNG favicon/PWA icon; transparent when the logo is hidden or unavailable
+     */
+    200: Blob | File;
+};
+
+export type GetBrandingIconResponse = GetBrandingIconResponses[keyof GetBrandingIconResponses];
+
+export type GetBrandingSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/settings/branding';
+};
+
+export type GetBrandingSettingsErrors = {
+    /**
+     * No valid session
+     */
+    401: Error;
+};
+
+export type GetBrandingSettingsError = GetBrandingSettingsErrors[keyof GetBrandingSettingsErrors];
+
+export type GetBrandingSettingsResponses = {
+    /**
+     * Administrator-only appearance settings
+     */
+    200: BrandingSettings;
+};
+
+export type GetBrandingSettingsResponse = GetBrandingSettingsResponses[keyof GetBrandingSettingsResponses];
+
+export type PutBrandingSettingsData = {
+    body: BrandingConfig;
+    path?: never;
+    query?: never;
+    url: '/api/settings/branding';
+};
+
+export type PutBrandingSettingsErrors = {
+    /**
+     * Invalid input
+     */
+    400: Error;
+    /**
+     * No valid session
+     */
+    401: Error;
+    /**
+     * CSRF rejected
+     */
+    403: Error;
+    /**
+     * Internal panel error
+     */
+    500: Error;
+};
+
+export type PutBrandingSettingsError = PutBrandingSettingsErrors[keyof PutBrandingSettingsErrors];
+
+export type PutBrandingSettingsResponses = {
+    /**
+     * Saved appearance
+     */
+    200: BrandingSettings;
+};
+
+export type PutBrandingSettingsResponse = PutBrandingSettingsResponses[keyof PutBrandingSettingsResponses];
+
 export type GetPanelTlsData = {
     body?: never;
     path?: never;
@@ -1328,6 +1466,10 @@ export type LoginErrors = {
      */
     401: Error;
     /**
+     * Authentication disabled, unapproved anonymous host, or cross-site request
+     */
+    403: Error;
+    /**
      * Too many requests
      */
     429: Error;
@@ -1351,6 +1493,15 @@ export type LogoutData = {
     url: '/api/auth/logout';
 };
 
+export type LogoutErrors = {
+    /**
+     * Authentication disabled or request rejected
+     */
+    403: Error;
+};
+
+export type LogoutError = LogoutErrors[keyof LogoutErrors];
+
 export type LogoutResponses = {
     /**
      * Session revoked server-side; cookie cleared
@@ -1373,6 +1524,7 @@ export type GetAuthMethodsResponses = {
      */
     200: {
         passkey_available: boolean;
+        auth_disabled?: boolean;
     };
 };
 
@@ -1390,6 +1542,10 @@ export type GetMeErrors = {
      * No valid session
      */
     401: Error;
+    /**
+     * Authentication disabled, unapproved anonymous host, or cross-site request
+     */
+    403: Error;
 };
 
 export type GetMeError = GetMeErrors[keyof GetMeErrors];
@@ -1399,6 +1555,10 @@ export type GetMeResponses = {
      * Current admin identity and enabled auth options
      */
     200: {
+        /**
+         * When true, access is anonymous with full admin privileges and no session is issued.
+         */
+        auth_disabled?: boolean;
         username: string;
         passkeys: Array<PasskeyInfo>;
     };
@@ -1412,6 +1572,15 @@ export type RevokeOtherSessionsData = {
     query?: never;
     url: '/api/auth/sessions';
 };
+
+export type RevokeOtherSessionsErrors = {
+    /**
+     * Authentication disabled or request rejected
+     */
+    403: Error;
+};
+
+export type RevokeOtherSessionsError = RevokeOtherSessionsErrors[keyof RevokeOtherSessionsErrors];
 
 export type RevokeOtherSessionsResponses = {
     /**
@@ -1444,6 +1613,10 @@ export type ListSessionsErrors = {
      * Invalid input
      */
     400: Error;
+    /**
+     * Authentication disabled, unapproved anonymous host, or cross-site request
+     */
+    403: Error;
 };
 
 export type ListSessionsError = ListSessionsErrors[keyof ListSessionsErrors];
@@ -1467,6 +1640,10 @@ export type RevokeSessionData = {
 };
 
 export type RevokeSessionErrors = {
+    /**
+     * Authentication disabled, unapproved anonymous host, or cross-site request
+     */
+    403: Error;
     /**
      * Not found
      */
@@ -1497,6 +1674,10 @@ export type WebauthnRegisterBeginErrors = {
      */
     400: Error;
     /**
+     * Authentication disabled, unapproved anonymous host, or cross-site request
+     */
+    403: Error;
+    /**
      * Too many requests
      */
     429: Error;
@@ -1526,6 +1707,10 @@ export type WebauthnRegisterFinishErrors = {
      */
     400: Error;
     /**
+     * Authentication disabled, unapproved anonymous host, or cross-site request
+     */
+    403: Error;
+    /**
      * Credential already registered
      */
     409: Error;
@@ -1554,6 +1739,10 @@ export type WebauthnLoginBeginErrors = {
      * Invalid input
      */
     400: Error;
+    /**
+     * Authentication disabled, unapproved anonymous host, or cross-site request
+     */
+    403: Error;
     /**
      * Not found
      */
@@ -1592,6 +1781,10 @@ export type WebauthnLoginFinishErrors = {
      */
     401: Error;
     /**
+     * Authentication disabled, unapproved anonymous host, or cross-site request
+     */
+    403: Error;
+    /**
      * Too many requests
      */
     429: Error;
@@ -1618,6 +1811,10 @@ export type WebauthnDeleteCredentialData = {
 };
 
 export type WebauthnDeleteCredentialErrors = {
+    /**
+     * Authentication disabled or request rejected
+     */
+    403: Error;
     /**
      * Not found
      */

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../lib/cn";
 import { useStrings } from "../i18n";
@@ -13,7 +13,7 @@ import { IconClose } from "./icons";
  * desktop, and landscape-vs-portrait is a decision about available height
  * that a width-only media query cannot make.
  */
-export type SheetPlacement = "auto" | "bottom" | "side" | "modal" | "form";
+export type SheetPlacement = "auto" | "bottom" | "side" | "modal" | "form" | "menu";
 
 export interface SheetProps {
   open: boolean;
@@ -28,6 +28,7 @@ export interface SheetProps {
   className?: string;
   headerClassName?: string;
   bodyClassName?: string;
+  anchor?: Pick<DOMRect,"top"|"bottom"|"right">;
 }
 
 const CONTAINER_CLASSES: Record<SheetPlacement, string> = {
@@ -36,6 +37,7 @@ const CONTAINER_CLASSES: Record<SheetPlacement, string> = {
   side: "flex items-stretch justify-end",
   modal: "flex items-center justify-center",
   form: "flex items-stretch justify-center lg:items-center",
+  menu: "flex items-end justify-center md:items-center",
 };
 
 const PANEL_CLASSES: Record<SheetPlacement, string> = {
@@ -46,6 +48,7 @@ const PANEL_CLASSES: Record<SheetPlacement, string> = {
   side: "h-dvh max-h-dvh w-full max-w-sm rounded-l-3xl pb-safe",
   modal: "m-4 max-h-[85dvh] w-full max-w-lg rounded-3xl",
   form: "h-dvh max-h-dvh w-full rounded-none pb-safe lg:h-auto lg:max-h-[90dvh] lg:max-w-[680px] lg:rounded-2xl lg:pb-0",
+  menu: "max-h-[90dvh] w-full rounded-t-2xl pb-safe md:max-w-[380px] md:rounded-2xl md:pb-0",
 };
 
 const FOCUSABLE =
@@ -68,13 +71,33 @@ export function Sheet({
   className,
   headerClassName,
   bodyClassName,
+  anchor,
 }: SheetProps) {
   const s = useStrings();
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const closeRef=useRef(onClose);
+  const pointerStartedHere=useRef(false);
+  useEffect(()=>{closeRef.current=onClose;},[onClose]);
+  useLayoutEffect(()=>{
+    if(!open)return;
+    const panel=panelRef.current;if(!panel)return;
+    function position(){
+      if(!panel)return;
+      panel.style.position="";panel.style.left="";panel.style.top="";panel.style.margin="";
+      if(placement!=="menu"||!anchor||innerWidth<768)return;
+      const box=panel.getBoundingClientRect();
+      panel.style.position="fixed";
+      panel.style.left=`${Math.max(12,Math.min(innerWidth-box.width-12,anchor.right-box.width))}px`;
+      const top=anchor.bottom+8+box.height<innerHeight?anchor.bottom+8:anchor.top-box.height-8;
+      panel.style.top=`${Math.max(12,Math.min(innerHeight-box.height-12,top))}px`;
+    }
+    position();window.addEventListener("resize",position);return()=>window.removeEventListener("resize",position);
+  },[open,placement,anchor]);
 
   useEffect(() => {
     if (!open) return;
+    pointerStartedHere.current=false;
 
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
@@ -87,7 +110,7 @@ export function Sheet({
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        closeRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -110,12 +133,12 @@ export function Sheet({
       document.body.style.overflow = previousOverflow;
       previouslyFocused.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
   return createPortal(
-    <div className={cn("fixed inset-0 z-50", CONTAINER_CLASSES[placement])}>
+    <div className={cn("fixed inset-0 z-50", CONTAINER_CLASSES[placement])} onPointerDownCapture={()=>{pointerStartedHere.current=true;}} onClickCapture={event=>{if(event.detail>0&&!pointerStartedHere.current){event.preventDefault();event.stopPropagation();}}} onClick={()=>{pointerStartedHere.current=false;}}>
       <div
         className="absolute inset-0 bg-scrim/60"
         onClick={onClose}
@@ -136,7 +159,7 @@ export function Sheet({
             decorative (the sheet is dismissed by the backdrop, Escape or
             the close button), so it is hidden from the a11y tree and from
             the centered `lg:` modal. */}
-        {(placement === "auto" || placement === "bottom") && (
+        {(placement === "auto" || placement === "bottom" || placement === "menu") && (
           <div
             className={cn(
               "mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-muted/40",

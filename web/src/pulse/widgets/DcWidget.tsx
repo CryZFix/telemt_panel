@@ -41,6 +41,7 @@ export function DcWidget() {
     <WidgetFrame
       title={s.pulse.widgets.dc}
       diagDomain="dc"
+      className="overview-dcs"
       stale={topic.stale}
       badge={
         view.status === "ok" && view.dcs.length > 0 ? (
@@ -67,9 +68,9 @@ export function DcWidget() {
       {view.status === "disabled" && <GatedNote reason={view.reason} />}
       {view.status === "ok" && view.dcs.length === 0 && <EmptyState title={s.pulse.dc.empty} />}
       {view.status === "ok" && view.dcs.length > 0 && (
-        <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2 xl:grid-cols-3" data-testid="dc-board">
-          {groups.map((group, index) => (
-            <DcGroup key={group.id} group={group} index={index} />
+        <div className="overview-dc-board grid gap-x-4 gap-y-5" data-testid="dc-board">
+          {groups.map((group) => (
+            <DcGroup key={group.id} group={group} />
           ))}
         </div>
       )}
@@ -90,7 +91,7 @@ function stateLabel(state: RouteState, s: ReturnType<typeof useStrings>) {
   return s.pulse.dc.state.healthy;
 }
 
-function DcGroup({ group, index }: { group: DcRouteGroup<DcStatus>; index: number }) {
+function DcGroup({ group }: { group: DcRouteGroup<DcStatus> }) {
   const s = useStrings();
   const state = groupState(group);
   const name = fill(s.pulse.dc.mainName, { dc: formatNumber(s, group.id) });
@@ -98,31 +99,11 @@ function DcGroup({ group, index }: { group: DcRouteGroup<DcStatus>; index: numbe
   return (
     <section
       aria-label={`${name}: ${stateLabel(state, s)}`}
-      className={cn(
-        "relative min-w-0 border-border/60",
-        index > 0 && "border-t pt-4",
-        index < 2 && "sm:border-t-0 sm:pt-0",
-        index >= 2 && "sm:border-t sm:pt-4",
-        index < 3 && "xl:border-t-0 xl:pt-0",
-        index >= 3 && "xl:border-t xl:pt-4",
-      )}
+      className="overview-dc-group relative min-w-0"
       data-state={state}
       data-testid={`dc-group-${group.id}`}
     >
-      {index % 2 === 1 && (
-        <span
-          aria-hidden="true"
-          data-testid="dc-divider-vertical"
-          className="absolute -left-2 inset-y-0 hidden w-px bg-border/60 sm:block xl:hidden"
-        />
-      )}
-      {index % 3 !== 0 && (
-        <span
-          aria-hidden="true"
-          data-testid="dc-divider-vertical"
-          className="absolute -left-2 inset-y-0 hidden w-px bg-border/60 xl:block"
-        />
-      )}
+      <span aria-hidden="true" data-testid="dc-divider-vertical" className="overview-dc-divider absolute -left-2 inset-y-0 w-px bg-border/60" />
       <div className="mb-2 flex h-6 items-start gap-2 px-0.5">
         <h3 className="text-[14px] font-semibold leading-[18px] text-text">{name}</h3>
         {group.id === 203 && (

@@ -119,7 +119,7 @@ func validateSourceRuntime(cfg *Config) error {
 	if err != nil || portErr != nil || n == 0 || strings.TrimSpace(cfg.Listen) != cfg.Listen {
 		return errors.New("invalid configuration field: listen (numeric port 1..65535 required)")
 	}
-	if _, err := bcrypt.Cost([]byte(cfg.Auth.PasswordHash)); err != nil {
+	if _, err := bcrypt.Cost([]byte(cfg.Auth.PasswordHash)); err != nil && !cfg.Auth.Disabled {
 		return errors.New("invalid configuration field: auth.password_hash (bcrypt required)")
 	}
 	return nil

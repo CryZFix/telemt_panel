@@ -6,10 +6,12 @@ import type { LoginError } from "../lib/api/generated/types.gen";
 import { webauthnLoginBegin, webauthnLoginFinish } from "../lib/api/generated/sdk.gen";
 import { getMeQueryKey, redirectIfAuthenticated } from "../auth/guards";
 import { safeRedirectTarget } from "../auth/safeRedirect";
+import { apiErrorCode, apiErrorMessage } from "../people/apiError";
 import { errorMessage, useStrings, type Dict } from "../i18n";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
-import loginLogo from "../assets/logo-login.webp";
+import { PanelLogo } from "../branding/branding";
+import { useBranding } from "../branding/useBranding";
 import {
   loginCredentialToJSON,
   passkeysSupported,
@@ -34,6 +36,7 @@ export const Route = createFileRoute("/login")({
 // itself never got a response at all).
 function LoginPage() {
   const s = useStrings();
+  const branding = useBranding();
   const { redirect } = Route.useSearch();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -79,7 +82,7 @@ function LoginPage() {
         setFormError(s.auth.passkeyCancelled);
         return;
       }
-      setFormError(s.auth.passkeyFailed);
+      setFormError(apiErrorCode(error) ? apiErrorMessage({code:apiErrorCode(error)},s) : s.auth.passkeyFailed);
     },
   });
 
@@ -99,11 +102,11 @@ function LoginPage() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[400px] flex-col justify-center gap-4 px-4 py-8">
       <div className="flex flex-col items-center gap-3 pb-1">
-        <img src={loginLogo} alt="" aria-hidden="true" width={1000} height={563} className="w-full" />
-        <h1 className="sr-only">{s.app.title}</h1>
+        <PanelLogo branding={branding} login className={branding.logo_mode === "default" ? "aspect-[1000/563] w-full object-contain" : "max-h-36 max-w-full object-contain"} />
+        <h1 className={branding.logo_mode === "default" && branding.title === "Telemt Panel" ? "sr-only" : "max-w-full break-words text-center text-2xl font-bold text-text"}>{branding.title}</h1>
       </div>
 
-      <form
+      {methodsQuery.data?.auth_disabled ? <p role="alert" className="rounded-xl border border-warn/30 bg-warn/10 p-4 text-sm text-warn">{s.auth.disabledAddress}</p> : <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-2.5 rounded-2xl bg-surface p-4"
         noValidate
@@ -167,7 +170,7 @@ function LoginPage() {
             </Button>
           </>
         )}
-      </form>
+      </form>}
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { initialBranding } from "../branding/useBranding";
 import { initializeLocale, isLocaleReady, subscribeLocale, useLocale, useLocaleLoadState } from "./store";
 
 // This small recovery message must remain available when a dictionary cannot load.
@@ -19,7 +20,7 @@ export function LocaleBootstrap({ children }: { children: ReactNode }) {
   return (
     <main className="grid min-h-dvh place-items-center bg-bg px-6 text-text">
       <div className="max-w-sm space-y-4 text-center">
-        <p className="text-lg font-semibold">Telemt Panel</p>
+        <p className="text-lg font-semibold">{initialBranding().title}</p>
         <p role={state.error ? "alert" : "status"} className="text-sm text-text-muted">
           {state.error ? text.failed : text.loading}
         </p>

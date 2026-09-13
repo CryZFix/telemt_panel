@@ -52,14 +52,14 @@ describe("getUserQuota", () => {
     expect(quota).toEqual({ usedBytes: 40, limitBytes: 100 });
   });
 
-  it("falls back to data_quota_bytes/total_octets when there is no quota entry", () => {
+  it("keeps usage unknown rather than substituting total_octets", () => {
     const quota = getUserQuota({ data_quota_bytes: 100, total_octets: 40 }, undefined);
-    expect(quota).toEqual({ usedBytes: 40, limitBytes: 100 });
+    expect(quota).toEqual({ usedBytes: null, limitBytes: 100 });
   });
 
   it("is unlimited when neither a quota entry nor a limit exists", () => {
     const quota = getUserQuota({ total_octets: 40 }, undefined);
-    expect(quota).toEqual({ usedBytes: 40, limitBytes: null });
+    expect(quota).toEqual({ usedBytes: null, limitBytes: null });
   });
 });
 

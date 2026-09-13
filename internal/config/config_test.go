@@ -34,6 +34,9 @@ func TestLoadMinimal(t *testing.T) {
 	if cfg.Listen != "0.0.0.0:8080" || cfg.Store.Driver != "memory" {
 		t.Errorf("defaults wrong: %+v", cfg)
 	}
+	if cfg.Auth.Disabled {
+		t.Fatal("authentication must be enabled by default")
+	}
 	if got := cfg.Auth.SessionTTLDuration(); got != 720*time.Hour {
 		t.Errorf("default TTL = %v", got)
 	}

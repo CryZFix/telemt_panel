@@ -15,7 +15,7 @@ import {
   setUserEnabledMutation,
 } from "../lib/api/generated/@tanstack/react-query.gen";
 import { apiErrorMessage } from "./apiError";
-import { pickTelegramLink, isSafeTelegramLink } from "./linkSelection";
+import { collectConnectionLinks } from "./connectionLinks";
 import { SublinkPanel } from "./SublinkPanel";
 import { ConfirmView } from "../ui/ConfirmView";
 import { refreshUsersAfterMutation } from "./refreshUsersAfterMutation";
@@ -27,6 +27,7 @@ import {
 } from "./actionSheet.helpers";
 import type { UsersTopicUser } from "../realtime/topics";
 import { invalidateTrafficQueries } from "../traffic/trafficInvalidation";
+import {IconPeople,IconLink,IconCopy,IconRefresh,IconShield,IconTrash,IconChevronRight} from "../ui/icons";
 
 // ActionSheetIntent is re-exported so callers keep importing the sheet's
 // own vocabulary from the sheet.
@@ -41,6 +42,10 @@ export interface UserActionSheetProps {
   onDeleted?: (username: string) => void;
   /** Which step the sheet opens at (default: the action menu). */
   intent?: ActionSheetIntent;
+  readOnly?: boolean;
+  onOpenPerson?: (user:UsersTopicUser)=>void;
+  onOpenAccess?: (user:UsersTopicUser)=>void;
+  anchor?: Pick<DOMRect,"top"|"bottom"|"right">;
 }
 
 // UserActionSheet is the "⋮"/long-press action sheet for one user
@@ -55,6 +60,10 @@ export function UserActionSheet({
   onEdit,
   onDeleted,
   intent = "menu",
+  readOnly = false,
+  onOpenPerson,
+  onOpenAccess,
+  anchor,
 }: UserActionSheetProps) {
   const s = useStrings();
   // Seeded from the intent, never re-derived: "which step am I on" belongs
@@ -127,10 +136,13 @@ export function UserActionSheet({
   });
 
   if (!user) return null;
+  const busy=deleteMutation.isPending||resetQuotaMutation.isPending||resetTrafficMutation.isPending||setEnabledMutation.isPending||rotateSecretMutation.isPending;
+  const t=s.people.workspace;
+  const item=(label:string,note:string,icon:React.ReactNode,onClick:()=>void,disabled=false,tone="")=><button type="button" className={`user-action-item ${tone}`} onClick={onClick} disabled={disabled}>{icon}<span><strong>{label}</strong><small>{note}</small></span><IconChevronRight/></button>;
 
   const title =
     view.kind === "menu"
-      ? s.people.actions.menu
+      ? user.username
       : view.kind === "share"
         ? s.people.share.title
         : view.kind === "qr"
@@ -140,76 +152,26 @@ export function UserActionSheet({
             : user.username;
 
   return (
-    <Sheet open={open} onClose={close} title={title}>
-      {view.kind === "menu" && (
-        <div className="flex flex-col gap-2">
-          <Button onClick={() => setView({ kind: "share" })}>{s.people.actions.share}</Button>
-          <Button variant="secondary" onClick={() => setView({ kind: "qr" })}>
-            {s.people.actions.qr}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const link = pickTelegramLink(user.links);
-              if (!link) {
-                pushToast(s.people.actions.noTelegramLink, "error");
-                return;
-              }
-              if (!isSafeTelegramLink(link)) {
-                pushToast(s.people.actions.unsafeTelegramLink, "error");
-                return;
-              }
-              window.location.href = link;
-            }}
-          >
-            {s.people.actions.openTelegram}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              onEdit(user);
-              close();
-            }}
-          >
-            {s.people.actions.edit}
-          </Button>
-          <Button variant="secondary" onClick={() => setView({ kind: "confirm-reset-quota" })}>
-            {s.people.actions.resetQuota}
-          </Button>
-          <Button variant="secondary" onClick={() => setView({ kind: "confirm-reset-traffic" })}>
-            {s.people.actions.resetTraffic}
-          </Button>
-          <div className="flex flex-col gap-1">
-            <Button
-              variant="secondary"
-              disabled={!caps.data?.capabilities.user_enable_disable}
-              onClick={() =>
-                setView({ kind: "confirm-toggle-enabled", nextEnabled: !user.enabled })
-              }
-            >
-              {user.enabled ? s.people.actions.disable : s.people.actions.enable}
-            </Button>
-            {caps.data && !caps.data.capabilities.user_enable_disable && (
-              <p className="text-xs text-text-faint">{s.gated.hints.user_enable_disable}</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-1">
-            <Button
-              variant="secondary"
-              disabled={!caps.data?.capabilities.rotate_secret}
-              onClick={() => setView({ kind: "confirm-rotate-secret" })}
-            >
-              {s.people.actions.rotateSecret}
-            </Button>
-            {caps.data && !caps.data.capabilities.rotate_secret && (
-              <p className="text-xs text-text-faint">{s.gated.hints.rotate_secret}</p>
-            )}
-          </div>
-          <Button variant="danger" onClick={() => setView({ kind: "confirm-delete" })}>
-            {s.people.actions.delete}
-          </Button>
-        </div>
-      )}
+    <Sheet open={open} onClose={()=>{if(!busy)close();}} title={title} placement={view.kind==="menu"?"menu":"auto"} anchor={anchor} className={view.kind==="menu"?"user-action-sheet":undefined}>
+      {readOnly&&<p className="user-note">{t.readOnly}</p>}
+      {view.kind === "menu" && <div className="user-action-groups">
+        <section><h3>{t.accessGroup}</h3>
+          {onOpenPerson&&item(t.openPerson,t.openNote,<IconPeople/>,()=>{onOpenPerson(user);close();})}
+          {onOpenAccess&&item(s.people.detail.linksTitle,t.accessNote,<IconLink/>,()=>{onOpenAccess(user);close();})}
+          {item(t.subscription,t.subscriptionNote,<IconCopy/>,()=>setView({kind:"share"}))}
+          {item(s.people.actions.edit,t.editUser,<IconPeople/>,()=>{onEdit(user);close();},readOnly)}
+          {item(s.people.actions.qr,s.people.actions.openTelegram,<IconLink/>,()=>setView({kind:"qr"}))}
+        </section>
+        <section><h3>{t.counters}</h3>
+          {item(s.people.actions.resetQuota,t.quotaNote,<IconRefresh/>,()=>setView({kind:"confirm-reset-quota"}),readOnly||!caps.data?.capabilities.quota)}
+          {item(s.people.actions.resetTraffic,t.trafficNote,<IconRefresh/>,()=>setView({kind:"confirm-reset-traffic"}))}
+        </section>
+        <section>
+          {item(user.enabled?s.people.actions.disable:s.people.actions.enable,user.enabled?t.blockNote:t.enableNote,<IconShield/>,()=>setView({kind:"confirm-toggle-enabled",nextEnabled:!user.enabled}),readOnly||!caps.data?.capabilities.user_enable_disable,"warn")}
+          {item(s.people.actions.rotateSecret,s.people.newSecret.warning,<IconRefresh/>,()=>setView({kind:"confirm-rotate-secret"}),readOnly||!caps.data?.capabilities.rotate_secret)}
+          {item(s.people.actions.delete,t.deleteNote,<IconTrash/>,()=>setView({kind:"confirm-delete"}),readOnly,"danger")}
+        </section>
+      </div>}
 
       {view.kind === "share" && <SublinkPanel username={user.username} />}
 
@@ -221,6 +183,7 @@ export function UserActionSheet({
           confirmLabel={s.people.actions.delete}
           danger
           pending={deleteMutation.isPending}
+          disabled={readOnly}
           onCancel={() => setView({ kind: "menu" })}
           onConfirm={() => deleteMutation.mutate({ path: { username: user.username } })}
         />
@@ -231,6 +194,7 @@ export function UserActionSheet({
           description={s.people.actions.confirmResetQuota}
           confirmLabel={s.people.actions.resetQuota}
           pending={resetQuotaMutation.isPending}
+          disabled={readOnly||!caps.data?.capabilities.quota}
           onCancel={() => setView({ kind: "menu" })}
           onConfirm={() => resetQuotaMutation.mutate({ path: { username: user.username } })}
         />
@@ -257,6 +221,7 @@ export function UserActionSheet({
           }
           danger={!view.nextEnabled}
           pending={setEnabledMutation.isPending}
+          disabled={readOnly||!caps.data?.capabilities.user_enable_disable}
           onCancel={() => setView({ kind: "menu" })}
           onConfirm={() =>
             setEnabledMutation.mutate({
@@ -273,6 +238,7 @@ export function UserActionSheet({
           confirmLabel={s.people.actions.rotateSecret}
           danger
           pending={rotateSecretMutation.isPending}
+          disabled={readOnly||!caps.data?.capabilities.rotate_secret}
           onCancel={() => setView({ kind: "menu" })}
           onConfirm={() => rotateSecretMutation.mutate({ path: { username: user.username } })}
         />
@@ -291,12 +257,13 @@ export function UserActionSheet({
 
 function TelegramQRView({ user }: { user: UsersTopicUser }) {
   const s = useStrings();
-  const link = pickTelegramLink(user.links);
+  const link = collectConnectionLinks(user.links).find(link=>link.primary)?.url;
   if (!link) return <p className="text-sm text-text-muted">{s.people.actions.noTelegramLink}</p>;
   return (
     <div className="flex flex-col gap-3">
       <CopyField value={link} />
       <QR value={link} />
+      <a className="tap-target inline-flex items-center justify-center rounded-lg bg-accent/10 p-3 text-accent" href={link}>{s.people.actions.openTelegram}</a>
     </div>
   );
 }

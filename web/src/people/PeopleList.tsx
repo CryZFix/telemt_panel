@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useQuery } from "@tanstack/react-query";
 import { AsyncState } from "../components/AsyncState";
 import { Button } from "../ui/Button";
 import { IconArrowDown, IconArrowUp, IconPeople, IconPlus, IconSearch, IconSort } from "../ui/icons";
@@ -13,11 +12,9 @@ import { useUsersTopic, findQuotaEntry } from "./useUsersTopic";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { useNow } from "./useNow";
 import { UserCard } from "./UserCard";
-import { UserActionSheet } from "./UserActionSheet";
-import { UserFormSheet } from "./UserFormSheet";
-import { PersonInspector } from "./PersonInspector";
-import { getTelemtWebAccessOptions } from "../lib/api/generated/@tanstack/react-query.gen";
-import { webAccessUsernames } from "./webAccess.helpers";
+import { UserActionSheet, type ActionSheetIntent } from "./UserActionSheet";
+import { PeopleContext } from "./PeopleContext";
+import type { SwipeSide } from "./useUserRowGestures";
 import {
   computeUserStatus,
   countUserFilters,
@@ -36,22 +33,17 @@ import {
 } from "./users.helpers";
 import type { UsersTopicUser } from "../realtime/topics";
 
-type FormTarget = { mode: "create" } | { mode: "edit"; user: UsersTopicUser };
 const FILTER_ORDER: readonly UserFilter[] = ["all", "online", "issues"];
-const PHONE_LIST_QUERY = "(max-width: 767px)";
-
-export interface PeopleListProps {
-  selectedUsername?: string | null;
-}
+const PHONE_LIST_QUERY = "(max-width: 650px)";
 
 // View state survives the phone route temporarily replacing the list with
 // a detail screen. It contains no user data or credentials.
 const savedView = { search: "", filter: "all" as UserFilter, scrollOffset: 0, returnUsername: null as string | null };
 
-export function PeopleList({ selectedUsername = null }: PeopleListProps) {
+export function PeopleList() {
   const s = useStrings();
   const topic = useUsersTopic();
-  const webAccessQuery = useQuery(getTelemtWebAccessOptions());
+  const access = useContext(PeopleContext);
   const connection = useConnectionState();
   const now = useNow();
   const navigate = useNavigate();
@@ -63,8 +55,9 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
   const [filter, setFilter] = useState<UserFilter>(savedView.filter);
   const [sort, setSort] = useState(() => getStoredUserSort());
   const [actionUser, setActionUser] = useState<UsersTopicUser | null>(null);
-  const [swipedUsername, setSwipedUsername] = useState<string | null>(null);
-  const [formTarget, setFormTarget] = useState<FormTarget | null>(null);
+  const [actionIntent,setActionIntent] = useState<ActionSheetIntent>("menu");
+  const [actionAnchor,setActionAnchor]=useState<DOMRect|undefined>();
+  const [swiped, setSwiped] = useState<{username:string;side:SwipeSide}|null>(null);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [gestureHintVisible, setGestureHintVisible] = useState(true);
   const activePreset = sortPresetOf(sort);
@@ -76,8 +69,8 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
     setStoredUserSort(next);
   }
 
-  const webUsernames = useMemo(() => webAccessUsernames(webAccessQuery.data), [webAccessQuery.data]);
-  const filterOrder = webAccessQuery.data?.vhosts.length ? [...FILTER_ORDER, "web" as const] : FILTER_ORDER;
+  const webUsernames = useMemo(() => new Set(access.profiles.keys()), [access.profiles]);
+  const filterOrder = access.profiles.size ? [...FILTER_ORDER, "web" as const] : FILTER_ORDER;
   const entries = useMemo<UserFilterInput<UsersTopicUser>[]>(
     () => topic.users.map((user) => ({
       user,
@@ -91,7 +84,6 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
     const kept = entries.filter((entry) => matchesUserFilter(entry, filter)).map((entry) => entry.user);
     return sortUsers(filterUsersByQuery(kept, debouncedSearch), sort);
   }, [entries, filter, debouncedSearch, sort]);
-  const inspectedUsername = selectedUsername ?? (!phoneListLayout ? visibleUsers[0]?.username : null);
   const isNarrowed = debouncedSearch.trim().length > 0 || filter !== "all";
   // TanStack Virtual exposes an imperative object by design; React Compiler
   // must leave this component un-memoized rather than freeze its measurements.
@@ -102,11 +94,13 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
     // The phone card has two metric rows; desktop/tablet keep one compact
     // table row. Matching the first estimate to the CSS layout prevents the
     // virtualizer from shifting the saved position while those rows measure.
-    estimateSize: () => phoneListLayout ? 94 : 75,
+    estimateSize: () => 84,
     overscan: 6,
     initialOffset: savedView.scrollOffset,
     getItemKey: (index) => visibleUsers[index]?.username ?? index,
   });
+  useEffect(()=>{setSwiped(null);},[phoneListLayout]);
+  useEffect(()=>{if(!swiped)return;const close=(event:KeyboardEvent)=>{if(event.key!=="Escape"||document.querySelector('[role="dialog"]'))return;setSwiped(null);const row=[...(scrollRef.current?.querySelectorAll<HTMLElement>('[data-user]')??[])].find(row=>row.dataset["user"]===swiped.username);row?.querySelector<HTMLButtonElement>('button.user-identity')?.focus();};document.addEventListener("keydown",close);return()=>document.removeEventListener("keydown",close);},[swiped]);
 
   useEffect(() => {
     const username = savedView.returnUsername;
@@ -137,11 +131,13 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
   }, []);
 
   function setSearchValue(value: string) {
+    setSwiped(null);
     savedView.search = value;
     setSearch(value);
   }
 
   function setFilterValue(value: UserFilter) {
+    setSwiped(null);
     savedView.filter = value;
     savedView.scrollOffset = 0;
     setFilter(value);
@@ -149,39 +145,34 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
   }
 
   function openPerson(user: UsersTopicUser) {
-    setSwipedUsername(null);
+    setSwiped(null);
     savedView.scrollOffset = scrollRef.current?.scrollTop ?? 0;
-    if (phoneListLayout) savedView.returnUsername = user.username;
+    savedView.returnUsername = user.username;
     navigate({ to: "/people/$username", params: { username: user.username } });
   }
 
-  function openPersonAccess(user: UsersTopicUser) {
-    try { window.sessionStorage.setItem("telemt-panel:people:initial-tab", "access"); } catch { /* storage is optional */ }
-    openPerson(user);
+  function openActions(user:UsersTopicUser,intent:ActionSheetIntent="menu",anchor?:DOMRect) {
+    setSwiped(null);setActionIntent(intent);setActionUser(user);setActionAnchor(anchor);
   }
-
-  function openCreatedPersonAccess(username: string) {
-    try { window.sessionStorage.setItem("telemt-panel:people:initial-tab", "access"); } catch { /* storage is optional */ }
-    savedView.returnUsername = username;
-    navigate({ to: "/people/$username", params: { username } });
-  }
+  const create = ()=>void navigate({to:"/people",search:{create:true}});
+  const edit = (user:UsersTopicUser)=>void navigate({to:"/people/$username",params:{username:user.username},search:{tab:"settings"}});
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-0 pb-0 md:px-4 md:pb-4">
-      <header className="flex shrink-0 items-center justify-between gap-4 px-4 py-3 md:px-0 md:py-4">
+    <div className="users-workspace flex min-h-0 flex-1 flex-col px-4 pb-4 md:px-6">
+      <header className="flex shrink-0 items-center justify-between gap-2 py-3 md:gap-4 md:py-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="people-page-icon hidden sm:grid"><IconPeople className="h-5 w-5" /></span>
           <div className="min-w-0">
             <span className="hidden text-micro font-semibold text-text-faint sm:block">{s.people.accessManagement}</span>
-            <div className="flex items-baseline gap-2"><h1 className="text-title font-extrabold tracking-tight text-text">{s.people.title}</h1><span className="font-mono text-meta tabular-nums text-text-muted">{counts.all}</span></div>
+            <div className="flex flex-wrap items-baseline gap-x-2"><h1 className="text-xl font-extrabold tracking-tight text-text md:text-title">{s.people.title}</h1><span className="font-mono text-meta tabular-nums text-text-muted">{counts.all}</span></div>
           </div>
         </div>
-        <Button onClick={() => setFormTarget({ mode: "create" })}><IconPlus className="h-4 w-4" />{s.people.create}</Button>
+        <Button className="shrink-0" disabled={access.readOnly} onClick={create}><IconPlus className="h-4 w-4" />{s.people.create}</Button>
       </header>
 
       <div className="flex min-h-0 flex-1 gap-3">
         <section className="people-list-pane flex min-w-0 flex-1 flex-col">
-          <div className={`people-toolbar ${inspectedUsername ? "has-inspector" : ""}`}>
+          <div className="people-toolbar">
             <label className="people-search-control">
               <IconSearch className="h-4 w-4 shrink-0" />
               <input ref={searchRef} value={search} onChange={(event) => setSearchValue(event.target.value)} placeholder={s.people.searchPlaceholder} aria-label={s.people.searchPlaceholder} autoCapitalize="off" autoCorrect="off" />
@@ -193,9 +184,9 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
             <button type="button" className="people-sort-button" aria-label={sortChipLabel} onClick={() => setSortSheetOpen(true)}><IconSort className="h-4 w-4" /><span>{s.people.sortPreset[activePreset]}</span><SortArrow ascending={sortAscending} /></button>
           </div>
 
-          {gestureHintVisible && <div className="people-mobile-hint"><span>↤</span><p><strong>{s.people.gestureHintTitle}</strong> {s.people.gestureHintBody}</p><button type="button" aria-label={s.common.close} onClick={() => setGestureHintVisible(false)}>×</button></div>}
+          {gestureHintVisible && phoneListLayout && <div className="user-gesture-hint"><p>{s.people.workspace.swipeHint}</p><button type="button" aria-label={s.common.close} onClick={() => setGestureHintVisible(false)}>×</button></div>}
 
-          <div className="people-table-head" aria-hidden="true"><span>{s.people.tableUser}</span><span>{s.people.tableNow}</span><span>{s.shell.traffic}</span><span>{s.people.tableAccess}</span></div>
+          <div className="user-table-head" aria-hidden="true"><span>{s.people.tableUser}</span><span>{s.people.connections} / IP</span><span>{s.people.workspace.totalTraffic} / {s.people.form.quota}</span><span>{s.people.form.expiry}</span><span>{s.people.actions.menu}</span></div>
 
           <div ref={scrollRef} className="people-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain" onScroll={(event) => { savedView.scrollOffset = event.currentTarget.scrollTop; }}>
             <AsyncState
@@ -206,7 +197,7 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
               isEmpty={(data) => data.length === 0}
               emptyTitle={isNarrowed ? s.common.empty : s.people.emptyTitle}
               emptyDescription={isNarrowed ? undefined : s.people.emptyDescription}
-              emptyAction={isNarrowed ? undefined : <Button onClick={() => setFormTarget({ mode: "create" })}>{s.people.create}</Button>}
+              emptyAction={isNarrowed ? undefined : <Button disabled={access.readOnly} onClick={create}>{s.people.create}</Button>}
               stale={topic.stale || connection.stale}
               onRetry={connection.retry}
               skeleton={<PeopleListSkeleton />}
@@ -222,14 +213,15 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
                           user={user}
                           quotaEntry={findQuotaEntry(topic.quota, user.username)}
                           now={now}
-                          selected={user.username === inspectedUsername}
                           gesturesEnabled={phoneListLayout}
-                          swipeOpen={swipedUsername === user.username}
+                          swipeSide={swiped?.username===user.username?swiped.side:null}
+                          canResetQuota={access.canResetQuota&&!topic.stale}
+                          canToggle={access.canToggle&&!topic.stale}
                           onOpen={() => openPerson(user)}
-                          onAccess={() => openPersonAccess(user)}
-                          onActions={() => { setSwipedUsername(null); setActionUser(user); }}
-                          onSwipeOpen={() => setSwipedUsername(user.username)}
-                          onSwipeClose={() => setSwipedUsername((current) => current === user.username ? null : current)}
+                          onActions={anchor => openActions(user,"menu",anchor)}
+                          onResetQuota={()=>openActions(user,"reset-quota")}
+                          onToggle={()=>openActions(user,"toggle-enabled")}
+                          onSwipeChange={side=>setSwiped(prev=>side?{username:user.username,side}:prev?.username===user.username?null:prev)}
                         />
                       </div>
                     );
@@ -244,10 +236,9 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
           </footer>
         </section>
 
-        {inspectedUsername && <PersonInspector username={inspectedUsername} onClose={() => navigate({ to: "/people" })} onEdit={(user) => setFormTarget({ mode: "edit", user })} />}
       </div>
 
-      <UserActionSheet open={actionUser !== null} user={actionUser} onClose={() => setActionUser(null)} onEdit={(user) => setFormTarget({ mode: "edit", user })} />
+      <UserActionSheet key={`${actionUser?.username}:${actionIntent}`} open={actionUser !== null} user={actionUser} anchor={actionAnchor} intent={actionIntent} readOnly={access.readOnly||topic.stale} onClose={() => setActionUser(null)} onEdit={edit} onOpenPerson={openPerson} onOpenAccess={user=>void navigate({to:"/people/$username",params:{username:user.username},search:{tab:"access"}})} />
       <Sheet open={sortSheetOpen} onClose={() => setSortSheetOpen(false)} title={s.people.sortLabel}>
         <CardList>
           {SORT_PRESET_ORDER.map((preset) => {
@@ -257,7 +248,6 @@ export function PeopleList({ selectedUsername = null }: PeopleListProps) {
           })}
         </CardList>
       </Sheet>
-      <UserFormSheet open={formTarget !== null} mode={formTarget?.mode ?? "create"} user={formTarget?.mode === "edit" ? formTarget.user : null} onClose={() => setFormTarget(null)} onConfigureWeb={openCreatedPersonAccess} />
     </div>
   );
 }

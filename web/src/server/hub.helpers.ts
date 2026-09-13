@@ -3,17 +3,63 @@ import type {
   TelemtConfig,
   UpdatesStatus,
 } from "../lib/api/generated/types.gen";
+import type { RuntimeGates, RuntimeUpstreamQualityData } from "../realtime/topics";
 
 type UpdateTarget = UpdatesStatus["targets"][number];
 
-export type ServerRouteMode = "me_fallback" | "me" | "direct" | "unknown";
+export type ServerRouteMode = "fallback" | "me" | "direct" | "unknown";
 export type ServerTransportMode = "tls" | "secure" | "classic" | "unknown";
+export type EgressType = "direct" | "socks4" | "socks5" | "shadowsocks" | "unknown";
+export interface EgressSummary {
+  routes: Array<{ type: EgressType; count: number; healthy: number }>;
+  scoped: number;
+  total: number;
+  healthy: number;
+}
 
 export interface ServerConfigSummary {
-  routeMode: ServerRouteMode;
   transport: ServerTransportMode;
   masking: boolean | null;
   dcOverrides: number | null;
+}
+
+// Runtime mode comes from Telemt's route controller, not fallback permission.
+export function runtimeRouteMode(gates: RuntimeGates | null | undefined): ServerRouteMode {
+  if (!gates) return "unknown";
+  if (gates.route_mode === "middle" && gates.reroute_active === false) return "me";
+  if (gates.route_mode === "direct") {
+    if (gates.reroute_active === true) return "fallback";
+    if (gates.reroute_active === false) return "direct";
+  }
+  return "unknown";
+}
+
+// Live pool health does not identify the upstream chosen by an active socket.
+// Keep scoped entries: this is the entire runtime pool, not a config projection.
+export function summarizeEgress(quality: RuntimeUpstreamQualityData | null | undefined): EgressSummary | null {
+  if (!quality?.enabled) return null;
+  const rows = quality.upstreams ?? (quality.summary?.configured_total === 0 ? [] : null);
+  if (!Array.isArray(rows)) return null;
+  if (quality.summary && quality.summary.configured_total !== rows.length) return null;
+  const counts: Record<EgressType, { count: number; healthy: number }> = {
+    direct: { count: 0, healthy: 0 }, socks4: { count: 0, healthy: 0 },
+    socks5: { count: 0, healthy: 0 }, shadowsocks: { count: 0, healthy: 0 }, unknown: { count: 0, healthy: 0 },
+  };
+  let healthy = 0;
+  let scoped = 0;
+  for (const row of rows) {
+    if (!row || typeof row.healthy !== "boolean") return null;
+    if (row.scopes) scoped++;
+    const type = row.route_kind;
+    const known = type === "direct" || type === "socks4" || type === "socks5" || type === "shadowsocks";
+    const group = counts[known ? type : "unknown"];
+    group.count++;
+    if (row.healthy) { group.healthy++; healthy++; }
+  }
+  return {
+    routes: (Object.keys(counts) as EgressType[]).filter((type) => counts[type].count > 0).map((type) => ({ type, ...counts[type] })),
+    scoped, total: rows.length, healthy,
+  };
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -27,7 +73,6 @@ export function summarizeServerConfig(
 ): ServerConfigSummary {
   if (!config) {
     return {
-      routeMode: "unknown",
       transport: "unknown",
       masking: null,
       dcOverrides: null,
@@ -38,14 +83,6 @@ export function summarizeServerConfig(
   const censorship = asRecord(config.sections["censorship"]);
   const modes = asRecord(general?.["modes"]);
   const overrides = asRecord(config.sections["dc_overrides"]);
-  const useMiddleProxy = general?.["use_middle_proxy"];
-  const fallback = general?.["me2dc_fallback"];
-
-  let routeMode: ServerRouteMode = "unknown";
-  if (useMiddleProxy === false) routeMode = "direct";
-  if (useMiddleProxy === true) {
-    routeMode = fallback === true ? "me_fallback" : "me";
-  }
 
   let transport: ServerTransportMode = "unknown";
   if (modes?.["tls"] === true) transport = "tls";
@@ -53,7 +90,6 @@ export function summarizeServerConfig(
   else if (modes?.["classic"] === true) transport = "classic";
 
   return {
-    routeMode,
     transport,
     masking:
       typeof censorship?.["mask"] === "boolean" ? censorship["mask"] : null,

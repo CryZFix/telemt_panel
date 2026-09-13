@@ -7,6 +7,7 @@ import { useStrings } from "../i18n";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { DisplayModeSwitch } from "../display-mode";
 import { useLogout } from "../auth/useLogout";
+import { useAuthDisabled } from "../auth/useAuthDisabled";
 
 // HeaderMenu — the shell's minimal overflow menu: theme + display mode +
 // sign out. Both switchers move to Сервер → Настройки once that page
@@ -15,6 +16,7 @@ export function HeaderMenu() {
   const s = useStrings();
   const [open, setOpen] = useState(false);
   const logout = useLogout();
+  const authDisabled = useAuthDisabled();
 
   return (
     <>
@@ -28,13 +30,13 @@ export function HeaderMenu() {
             <DisplayModeSwitch />
           </div>
           <ThemeToggle />
-          <Button
+          {!authDisabled && <Button
             variant="secondary"
             onClick={() => logout.mutate({})}
             disabled={logout.isPending}
           >
             {s.auth.signOut}
-          </Button>
+          </Button>}
         </div>
       </Sheet>
     </>

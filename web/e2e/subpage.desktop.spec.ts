@@ -6,7 +6,7 @@ test("subscription link opens anonymously, copies on HTTP and is revoked after r
   // Use the real UI flow, not a fabricated token or intercepted API response.
   await login();
   await page.getByTestId(`user-card-${SEEDED_USER}`).click();
-  await page.getByRole("tab", { name: "Доступ" }).click();
+  await page.getByRole("button", { name: "Доступ", exact: true }).click();
   const field = page.getByTestId("sublink-value");
   await expect(field).toBeVisible();
   const before = (await field.textContent())!.trim();

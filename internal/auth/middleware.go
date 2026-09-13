@@ -38,6 +38,15 @@ func SessionExpired(age, ttl time.Duration) bool {
 func RequireSession(st store.StateStore, cfg *config.Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if cfg.Auth.Disabled {
+				if !anonymousHostAllowed(r, cfg) {
+					WriteError(w, http.StatusForbidden, "forbidden", "authentication is disabled; use an IP address or the domain configured in public_url")
+					return
+				}
+				ctx := context.WithValue(r.Context(), ctxUsername, "anonymous")
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
 			cookie, err := r.Cookie(CookieName)
 			if err != nil || cookie.Value == "" {
 				writeSessionExpired(w)
@@ -111,6 +120,10 @@ func csrfAllowed(r *http.Request, cfg *config.Config) bool {
 	switch strings.ToLower(r.Header.Get("Sec-Fetch-Site")) {
 	case "same-origin", "none":
 		return true
+	case "same-site", "cross-site":
+		if cfg.Auth.Disabled {
+			return false
+		}
 	}
 
 	origin := r.Header.Get("Origin")
@@ -125,6 +138,15 @@ func csrfAllowed(r *http.Request, cfg *config.Config) bool {
 	reqHost := r.Host
 	if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" && PeerTrusted(r, cfg.TrustedProxyPrefixes) {
 		reqHost = fwd
+	}
+	if cfg.Auth.Disabled {
+		scheme := "http"
+		if RequestIsSecure(r, cfg.TrustedProxyPrefixes) {
+			scheme = "https"
+		}
+		if u.Scheme != scheme || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+			return false
+		}
 	}
 	return strings.EqualFold(u.Host, reqHost)
 }

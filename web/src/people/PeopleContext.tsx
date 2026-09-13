@@ -1,0 +1,30 @@
+import {createContext, useMemo, useState, type ReactNode} from "react";
+import {useQuery} from "@tanstack/react-query";
+import {getTelemtWebAccessOptions} from "../lib/api/generated/@tanstack/react-query.gen";
+import {useCaps} from "../caps/useCaps";
+import {useSnapshot} from "../realtime";
+import type {StatsSnapshot} from "../realtime/topics";
+import {webProfileIndex, type LinkFormat, type WebLinkProfile} from "./connectionLinks";
+
+export interface PeopleContextValue {
+  profiles: Map<string, WebLinkProfile[]>;
+  webUnavailable: boolean;
+  readOnly: boolean;
+  canResetQuota: boolean;
+  canToggle: boolean;
+  formats: Map<string, LinkFormat>;
+  setFormat: (username: string, format: LinkFormat) => void;
+}
+// eslint-disable-next-line react-refresh/only-export-components
+export const PeopleContext = createContext<PeopleContextValue>({profiles:new Map(),webUnavailable:false,readOnly:true,canResetQuota:false,canToggle:false,formats:new Map(),setFormat:()=>{}});
+
+export function PeopleProvider({children}: {children: ReactNode}) {
+  const caps = useCaps();
+  const stats = useSnapshot<StatsSnapshot>("stats");
+  const readOnly = stats.data?.health?.read_only !== false || stats.stale;
+  const web = useQuery({...getTelemtWebAccessOptions(), enabled:!!caps.data?.capabilities.config_api});
+  const profiles = useMemo(()=>webProfileIndex(web.data),[web.data]);
+  const [formats,setFormats] = useState(new Map<string,LinkFormat>());
+  const value = useMemo<PeopleContextValue>(()=>({profiles,webUnavailable:web.isError,readOnly,canResetQuota:!readOnly&&!!caps.data?.capabilities.quota,canToggle:!readOnly&&!!caps.data?.capabilities.user_enable_disable,formats,setFormat:(name,format)=>setFormats(prev=>new Map(prev).set(name,format))}),[profiles,web.isError,formats,readOnly,caps.data]);
+  return <PeopleContext.Provider value={value}>{children}</PeopleContext.Provider>;
+}

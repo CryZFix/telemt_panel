@@ -30,6 +30,7 @@ export interface PersonMetaInput {
 }
 
 function quotaPhrase(quota: UserQuotaView, s: Dict): string {
+  if (quota.usedBytes === null) return s.people.workspace.quotaUnknown;
   if (quota.limitBytes === null) return formatBytes(quota.usedBytes, s);
   return `${formatBytes(quota.usedBytes, s)} ${s.people.meta.of} ${formatBytes(quota.limitBytes, s)}`;
 }
@@ -39,6 +40,7 @@ function quotaPhrase(quota: UserQuotaView, s: Dict): string {
 // unlike quotaPhrase it names an absent limit instead of staying silent
 // about it (the row's meta line has no room, a quota card does).
 export function quotaSummary(quota: UserQuotaView, s: Dict): string {
+  if (quota.usedBytes === null) return s.people.workspace.quotaUnknown;
   if (quota.limitBytes === null) {
     return `${formatBytes(quota.usedBytes, s)} · ${s.people.form.quotaUnlimited}`;
   }

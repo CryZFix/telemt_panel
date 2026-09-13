@@ -13,6 +13,7 @@ import { registerServiceWorker } from "./pwa/registerSW";
 import { applyTheme, getStoredTheme } from "./lib/theme";
 import { applyDocumentLocale, getLocale } from "./i18n";
 import { LocaleBootstrap } from "./i18n/LocaleBootstrap";
+import { BrandingDocument } from "./branding/branding";
 import "./styles/index.css";
 
 // index.html's boot script already pinned [data-theme] before first paint;
@@ -50,6 +51,7 @@ createRoot(rootEl).render(
   <StrictMode>
     <LocaleBootstrap>
       <QueryClientProvider client={queryClient}>
+        <BrandingDocument />
         <DisplayModeProvider>
           <SSEProvider>
             <RouterProvider router={router} />

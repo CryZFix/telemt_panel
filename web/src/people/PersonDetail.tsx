@@ -1,118 +1,52 @@
-import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { cn } from "../lib/cn";
-import { formatBytes } from "../lib/format";
-import { useStrings } from "../i18n";
-import { AsyncState } from "../components/AsyncState";
-import { Avatar } from "../ui/Avatar";
-import { Button } from "../ui/Button";
-import { IconButton } from "../ui/IconButton";
-import { IconChevronLeft, IconMore } from "../ui/icons";
-import { KVRow } from "../ui/KVRow";
-import { useConnectionState } from "../realtime";
-import { useUsersTopic, findQuotaEntry } from "./useUsersTopic";
-import { useNow } from "./useNow";
-import { UserActionSheet } from "./UserActionSheet";
-import { UserFormSheet } from "./UserFormSheet";
-import { SublinkPanel } from "./SublinkPanel";
-import { ExpiryLine, PersonLinks, PersonQuotaCard, SectionLabel } from "./PersonSections";
-import { PersonIPHistoryEntry } from "./PersonIPHistory";
-import { PersonTrafficHistory } from "./PersonTrafficHistory";
-import { computeUserStatus, formatBitsPerSecond, getUserQuota, isOnline } from "./users.helpers";
-import { personAvatarTone } from "./personMeta.helpers";
-import { WebAccessPanel } from "./WebAccessPanel";
-import type { UsersTopicUser } from "../realtime/topics";
+import {useContext,useState} from "react";
+import {Link,useNavigate} from "@tanstack/react-router";
+import {useStrings} from "../i18n";
+import {formatBytes} from "../lib/format";
+import {AsyncState} from "../components/AsyncState";
+import {Button} from "../ui/Button";
+import {IconMore} from "../ui/icons";
+import {useConnectionState} from "../realtime";
+import {useUsersTopic,findQuotaEntry} from "./useUsersTopic";
+import {useNow} from "./useNow";
+import {UserActionSheet,type ActionSheetIntent} from "./UserActionSheet";
+import {UserFormSheet} from "./UserFormSheet";
+import {PersonQuotaCard,ExpiryLine} from "./PersonSections";
+import {PersonTrafficHistory} from "./PersonTrafficHistory";
+import {PersonIPHistory,PersonIPHistoryEntry} from "./PersonIPHistory";
+import {ConnectionLinks,QuickConnectionLinks} from "./ConnectionLinks";
+import {SublinkPanel} from "./SublinkPanel";
+import {WebAccessPanel} from "./WebAccessPanel";
+import {PeopleContext} from "./PeopleContext";
+import {getUserQuota,isOnline,computeUserStatus} from "./users.helpers";
+import {useUserFormBlocker} from "./useUserFormBlocker";
 
-type DetailTab = "overview" | "access" | "limits";
+export type PersonTab="overview"|"access"|"ips"|"settings";
 
-// Phone portrait gets a real detail screen. The list, its filters and its
-// create control are not mounted at this route, so nothing behind the back
-// action can be mistaken for controls of the selected user.
-export function PersonDetail({ username }: { username: string }) {
-  const s = useStrings();
-  const topic = useUsersTopic();
-  const connection = useConnectionState();
-  const now = useNow();
-  const navigate = useNavigate();
-  const [actionsOpen, setActionsOpen] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
-  const [tab, setTab] = useState<DetailTab>(() => {
-    try {
-      const queued = window.sessionStorage.getItem("telemt-panel:people:initial-tab");
-      window.sessionStorage.removeItem("telemt-panel:people:initial-tab");
-      return queued === "access" ? "access" : "overview";
-    } catch {
-      return "overview";
-    }
-  });
-
-  return (
-    <div className="min-h-0 flex-1 overflow-y-auto pb-24">
-      <AsyncState
-        isPending={topic.isPending}
-        isError={topic.isError}
-        errorCode={topic.errorCode ?? undefined}
-        data={topic.users}
-        isEmpty={(users) => !users.some((user) => user.username === username)}
-        emptyTitle={s.people.notFoundTitle}
-        stale={topic.stale || connection.stale}
-        onRetry={connection.retry}
-      >
-        {(users) => {
-          const user = users.find((candidate) => candidate.username === username)!;
-          const quotaEntry = findQuotaEntry(topic.quota, user.username);
-          const quota = getUserQuota(user, quotaEntry);
-          const status = computeUserStatus(user, quota, now);
-          return (
-            <>
-              <header className="person-inspector-head min-h-[76px] bg-surface px-3 py-3">
-                <Link to="/people" aria-label={s.common.back} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-text-muted"><IconChevronLeft className="h-5 w-5" /></Link>
-                <Avatar className="people-square-avatar" name={user.username} size="md" tone={personAvatarTone(user, status)} online={isOnline(user)} ringOn="surface" />
-                <div className="min-w-0 flex-1"><h1 className="truncate text-[16px] font-bold text-text">{user.username}</h1><span className={cn("mt-1 block truncate text-micro font-semibold", status === "active" ? isOnline(user) ? "text-ok" : "text-text-muted" : "text-warn")}>{status === "active" ? isOnline(user) ? s.people.online : s.people.offline : s.people.status[status]}</span></div>
-                <IconButton aria-label={s.people.actions.menu} onClick={() => setActionsOpen(true)}><IconMore /></IconButton>
-              </header>
-
-              <MobileVitals user={user} />
-              <nav className="person-tab-list bg-surface" role="tablist">
-                {(["overview", "access", "limits"] as const).map((key) => <button key={key} type="button" role="tab" aria-selected={tab === key} className="person-tab-button" onClick={() => setTab(key)}>{s.people.inspector.tabs[key]}</button>)}
-              </nav>
-
-              <div className="flex flex-col gap-5 px-4 py-4">
-                {tab === "overview" && <MobileOverview user={user} now={now} />}
-                {tab === "access" && <MobileAccess user={user} />}
-                {tab === "limits" && <MobileLimits user={user} now={now} onEdit={() => setFormOpen(true)} />}
-              </div>
-
-              <UserActionSheet open={actionsOpen} user={user} onClose={() => setActionsOpen(false)} onEdit={() => setFormOpen(true)} onDeleted={() => navigate({ to: "/people" })} />
-              <UserFormSheet open={formOpen} mode="edit" user={user} onClose={() => setFormOpen(false)} />
-            </>
-          );
-        }}
-      </AsyncState>
-    </div>
-  );
-}
-
-function MobileVitals({ user }: { user: UsersTopicUser }) {
-  const s = useStrings();
-	const trafficValue = user.traffic ? formatBytes(user.traffic.current_month_bytes, s) : "—";
-	const trafficNote = user.traffic ? `${formatBytes(user.traffic.observed_total_bytes, s)} ${s.people.allTime}` : s.people.trafficHistory.empty;
-	return <div className="person-vitals-grid bg-surface">{[[s.people.connections, String(user.current_connections), s.people.now], [s.people.activeIps, String(user.active_unique_ips), user.max_unique_ips ? `${s.people.meta.of} ${user.max_unique_ips}` : "∞"], [s.shell.traffic, trafficValue, trafficNote]].map(([label, value, caption]) => <div key={label} className="person-vital-cell"><span>{label}</span><strong>{value}</strong><small>{caption}</small></div>)}</div>;
-}
-
-function MobileOverview({ user, now }: { user: UsersTopicUser; now: number }) {
-  const s = useStrings();
-  const topic = useUsersTopic();
-  return <><section><SectionLabel className="mb-2">{s.people.inspector.usage}</SectionLabel><PersonQuotaCard quota={getUserQuota(user, findQuotaEntry(topic.quota, user.username))} /></section><PersonTrafficHistory username={user.username} traffic={user.traffic} /><PersonIPHistoryEntry key={user.username} username={user.username} /><div className="border-t border-border pt-3"><KVRow label={s.people.form.expiry} value={<ExpiryLine expirationRfc3339={user.expiration_rfc3339} now={now} />} /><KVRow label={s.people.runtimeState} value={user.in_runtime ? s.people.runtimeLoaded : s.people.status.not_in_runtime} /></div></>;
-}
-
-function MobileAccess({ user }: { user: UsersTopicUser }) {
-  const s = useStrings();
-  return <><section><SectionLabel className="mb-2">{s.people.inspector.accessLink}</SectionLabel><SublinkPanel username={user.username} /></section><section><WebAccessPanel username={user.username} /></section><section><SectionLabel className="mb-2">{s.people.detail.linksTitle}</SectionLabel><div className="flex flex-col gap-2"><PersonLinks links={user.links} /></div></section></>;
-}
-
-function MobileLimits({ user, now, onEdit }: { user: UsersTopicUser; now: number; onEdit: () => void }) {
-  const s = useStrings();
-  const unlimited = s.people.form.quotaUnlimited;
-  return <><div className="rounded-xl bg-surface px-3"><KVRow label={s.people.form.maxConnections} value={user.max_tcp_conns ?? unlimited} /><KVRow label={s.people.form.maxIps} value={user.max_unique_ips ?? unlimited} /><KVRow label={s.people.form.rateUpLabel} value={user.rate_limit_up_bps ? formatBitsPerSecond(user.rate_limit_up_bps, s) : unlimited} /><KVRow label={s.people.form.rateDownLabel} value={user.rate_limit_down_bps ? formatBitsPerSecond(user.rate_limit_down_bps, s) : unlimited} /><KVRow label={s.people.form.quota} value={user.data_quota_bytes ? formatBytes(user.data_quota_bytes, s) : unlimited} /><KVRow label={s.people.form.expiry} value={<ExpiryLine expirationRfc3339={user.expiration_rfc3339} now={now} />} />{user.user_ad_tag && <KVRow label={s.people.adTag} value={user.user_ad_tag} monospace />}</div><Button variant="secondary" onClick={onEdit}>{s.people.actions.edit}</Button></>;
+export function PersonDetail({username,tab="overview"}:{username:string;tab?:PersonTab}) {
+  const s=useStrings(),t=s.people.workspace,topic=useUsersTopic(),connection=useConnectionState(),now=useNow();
+  const access=useContext(PeopleContext),navigate=useNavigate();
+  const [intent,setIntent]=useState<ActionSheetIntent|null>(null);
+  const {setDirty,confirmation}=useUserFormBlocker();
+  function select(next:PersonTab){void navigate({to:"/people/$username",params:{username},search:{tab:next},replace:true});}
+  return <div className="user-detail-page">
+    <Link className="user-back" to="/people" aria-label={s.common.back}>← {t.back}</Link>
+    <AsyncState isPending={topic.isPending} isError={topic.isError} errorCode={topic.errorCode??undefined} data={topic.users} isEmpty={users=>!users.some(u=>u.username===username)} emptyTitle={s.people.notFoundTitle} stale={topic.stale||connection.stale} onRetry={connection.retry}>
+      {users=>{
+        const user=users.find(u=>u.username===username)!;
+        const quota=getUserQuota(user,findQuotaEntry(topic.quota,username));
+        const state=computeUserStatus(user,quota,now);
+        return <>
+          <header className="user-detail-header"><div><h1>{username}</h1><p className={state!=="active"?"text-warn":isOnline(user)?"text-ok":"text-text-muted"}>{state==="active"?(isOnline(user)?s.people.online:s.people.offline):s.people.status[state]}</p></div><div className="user-buttons"><QuickConnectionLinks user={user}/><Button variant="secondary" disabled={access.readOnly||topic.stale} onClick={()=>select("settings")}>{s.people.actions.edit}</Button><button type="button" className="user-menu-trigger" aria-label={s.people.actions.menu} onClick={()=>setIntent("menu")}><IconMore/></button></div></header>
+          {tab!=="settings"&&<div className="user-vitals">{[[s.people.connections,String(user.current_connections),s.people.now],[s.people.activeIps,String(user.active_unique_ips),user.max_unique_ips?`${s.people.meta.of} ${user.max_unique_ips}`:t.unlimited],[t.totalTraffic,user.traffic?formatBytes(user.traffic.observed_total_bytes,s):"—",t.totalNote]].map(([label,value,note])=><div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div>}
+          <nav className="user-detail-tabs" aria-label={username}>{(["overview","access","ips","settings"] as const).map(key=><button type="button" key={key} aria-current={tab===key?"page":undefined} onClick={()=>select(key)}>{t[key]}</button>)}</nav>
+          {tab==="overview"&&<div className="user-detail-grid"><div className="user-detail-main"><section className="user-section"><PersonTrafficHistory username={username} traffic={user.traffic}/></section><section className="user-section"><PersonIPHistoryEntry username={username}/><Button variant="secondary" onClick={()=>select("ips")}>{t.ips} →</Button></section></div><div className="user-detail-aside"><section className="user-section"><h2>{t.quota}</h2><p className="user-note">{t.usedQuota} · Telemt</p><PersonQuotaCard quota={quota}/><Button variant="secondary" disabled={!access.canResetQuota||topic.stale||quota.usedBytes===null} onClick={()=>setIntent("reset-quota")}>{t.resetQuota}</Button><p className="user-note">{t.resetNote}</p></section><section className="user-section"><h2>{t.conditions}</h2><dl className="user-facts"><div><dt>{s.people.form.expiry}</dt><dd><ExpiryLine expirationRfc3339={user.expiration_rfc3339} now={now}/></dd></div><div><dt>{s.people.runtimeState}</dt><dd>{user.in_runtime?s.people.runtimeLoaded:s.people.status.not_in_runtime}</dd></div><div><dt>{s.people.webAccess.title}</dt><dd>{access.profiles.get(username)?.length??0}</dd></div></dl></section></div></div>}
+          {tab==="access"&&<div className="user-detail-grid"><div className="user-detail-main"><ConnectionLinks user={user}/><section className="user-section"><h2>{t.subscription}</h2><SublinkPanel username={username}/></section></div><section className="user-section"><WebAccessPanel username={username} readOnly={access.readOnly||topic.stale}/></section></div>}
+          {tab==="ips"&&<section className="user-section"><PersonIPHistory username={username}/></section>}
+          {tab==="settings"&&<><p className="user-note">{access.readOnly?t.readOnly:""}</p><UserFormSheet inline open mode="edit" user={user} disabled={access.readOnly||topic.stale} onDirtyChange={setDirty} onSaved={()=>setDirty(false)} onClose={()=>select("overview")}/></>}
+          <UserActionSheet key={intent??"closed"} open={intent!==null} intent={intent??"menu"} user={user} readOnly={access.readOnly||topic.stale} onClose={()=>setIntent(null)} onEdit={()=>select("settings")} onOpenPerson={()=>select("overview")} onOpenAccess={()=>select("access")} onDeleted={()=>void navigate({to:"/people"})}/>
+        </>;
+      }}
+    </AsyncState>
+    {confirmation}
+  </div>;
 }

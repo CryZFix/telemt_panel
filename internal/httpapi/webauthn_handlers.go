@@ -61,13 +61,17 @@ type webAuthnRegisterBeginRequest struct {
 }
 
 func (s *Server) handleAuthMethods(w http.ResponseWriter, _ *http.Request) {
+	if s.cfg.Auth.Disabled {
+		writeJSON(w, http.StatusOK, map[string]bool{"passkey_available": false, "auth_disabled": true})
+		return
+	}
 	credentials, err := s.st.ListWebAuthnCredentials()
 	if err != nil {
 		slog.Error("auth methods: list WebAuthn credentials", "err", err)
 		auth.WriteError(w, http.StatusInternalServerError, "internal_error", "could not read authentication methods")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{"passkey_available": len(credentials) > 0})
+	writeJSON(w, http.StatusOK, map[string]bool{"passkey_available": len(credentials) > 0, "auth_disabled": false})
 }
 
 func (s *Server) webAuthnOrigin(r *http.Request) (origin, rpID string, err error) {
@@ -97,6 +101,11 @@ func (s *Server) webAuthnOrigin(r *http.Request) (origin, rpID string, err error
 	// IPv6 brackets exactly as parsed, but normalize host casing so a valid
 	// request carrying an uppercase Host header cannot create an unusable key.
 	origin = (&url.URL{Scheme: scheme, Host: strings.ToLower(host)}).String()
+	// Fail before the browser creates a credential when a TLS-terminating
+	// proxy is not trusted or has not forwarded the external scheme/host.
+	if browserOrigin := r.Header.Get("Origin"); browserOrigin != "" && !protocol.IsOriginInHaystack(browserOrigin, []string{origin}) {
+		return "", "", errors.New("browser origin differs from panel origin; check trusted_proxies and forwarded headers")
+	}
 	return origin, rpID, nil
 }
 

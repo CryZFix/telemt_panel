@@ -24,7 +24,7 @@ export { SectionLabel } from "../ui/SectionLabel";
 export function PersonQuotaCard({ quota, className }: { quota: UserQuotaView; className?: string }) {
   const s = useStrings();
   const unlimited = isUnlimitedQuota(quota.limitBytes);
-  const ratio = unlimited ? 0 : quotaRatio(quota.usedBytes, quota.limitBytes);
+  const ratio = unlimited || quota.usedBytes === null ? 0 : quotaRatio(quota.usedBytes, quota.limitBytes);
 
   return (
     <div className={cn("rounded-xl bg-bg px-3.5 py-3", className)}>
@@ -32,7 +32,7 @@ export function PersonQuotaCard({ quota, className }: { quota: UserQuotaView; cl
         <span className="text-text-muted">{s.people.detail.quota}</span>
         <span className="font-mono tabular-nums text-text">{quotaSummary(quota, s)}</span>
       </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-bar-track">
+      <div hidden={quota.usedBytes===null} className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-bar-track">
         <div
           className={cn("h-full rounded-full transition-[width]", quotaFillClass(ratio, unlimited))}
           style={{ width: `${ratio * 100}%` }}

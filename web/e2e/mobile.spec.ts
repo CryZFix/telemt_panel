@@ -45,13 +45,15 @@ test("login → people → create user → share → sub-page → overview → p
     await page.setViewportSize({ width: 360, height: 640 });
   });
 
-  await test.step("create a user via the Sheet form", async () => {
+  await test.step("create a user via the full-page form", async () => {
     await page.getByRole("button", { name: "Создать", exact: true }).click();
     await page.getByTestId("user-form-username").fill(newUsername);
     await page.getByTestId("user-form-submit").click();
     await expect(page.getByText("Пользователь создан")).toBeVisible();
     await page.getByRole("button", { name: "Готово" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(page.getByRole("heading", {name:newUsername,exact:true})).toBeVisible();
+    await page.getByRole("link",{name:"Назад",exact:true}).click();
   });
 
   await test.step("the new user appears in the list without a manual reload", async () => {
@@ -71,7 +73,7 @@ test("login → people → create user → share → sub-page → overview → p
     // fixture user telemttest seeds with a real classic link.
     await page.getByTestId(`user-card-${SEEDED_USER}`).click();
     await expect(page).toHaveURL(new RegExp(`/people/${SEEDED_USER}$`));
-    await page.getByRole("tab", { name: "Доступ" }).click();
+    await page.getByRole("button", { name: "Доступ",exact:true }).click();
     const sublinkValue = page.getByTestId("sublink-value");
     await expect(sublinkValue).toBeVisible();
     sublinkUrl = (await sublinkValue.textContent())?.trim() ?? "";

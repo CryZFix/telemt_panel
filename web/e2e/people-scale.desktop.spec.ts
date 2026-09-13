@@ -6,6 +6,8 @@ test("2000 users keep bounded rows, navigation and fresh data after reconnect", 
   test.setTimeout(180_000);
   // Never seed a configured Telemt URL. globalSetup owns this fixed mock port.
   expect(MOCK_URL).toBe("http://127.0.0.1:48190");
+  const initial = await (await page.request.get(`${MOCK_URL}/v1/users`)).json();
+  const initialCount = initial.data.length;
   let next = 0;
   await Promise.all(Array.from({ length: 4 }, async () => {
     while (next < 2000) {
@@ -45,7 +47,7 @@ test("2000 users keep bounded rows, navigation and fresh data after reconnect", 
   const search = page.getByPlaceholder("Поиск по имени");
   const scroll = page.locator(".people-list-scroll");
   const all = page.getByRole("tab", { name: /^Все/ });
-  await expect(all).toContainText("2001", { timeout: 20_000 });
+  await expect(all).toContainText(String(initialCount + 2000), { timeout: 20_000 });
   await page.locator(".people-sort-button").click();
   await page.getByRole("dialog").getByRole("button", { name: /Имя/ }).click();
   await expect(page.locator(".people-sort-button")).toContainText("Имя");
@@ -81,7 +83,7 @@ test("2000 users keep bounded rows, navigation and fresh data after reconnect", 
   await page.mouse.down();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.mouse.up();
-  await expect(page.locator(".people-user-shell.is-swiped")).toHaveCount(0);
+  await expect(page.locator('.user-row-shell[data-swipe="left"],.user-row-shell[data-swipe="right"]')).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await last.click();
@@ -109,7 +111,7 @@ test("2000 users keep bounded rows, navigation and fresh data after reconnect", 
     await expect(page).toHaveURL(/\/pulse\/diag\/counters$/);
     await expect.poll(() => activeStreams.size).toBe(1);
     await page.getByRole("link", { name: "Пользователи", exact: true }).click();
-    await expect(all).toContainText("2001");
+    await expect(all).toContainText(String(initialCount + 2000));
     await search.fill("scale-1999");
     await expect(last).toBeVisible();
     await expect.poll(() => activeStreams.size).toBe(1);
@@ -145,7 +147,7 @@ test("2000 users keep bounded rows, navigation and fresh data after reconnect", 
     const before = receivedFrames;
     await expect.poll(() => receivedFrames, { timeout: 25000 }).toBeGreaterThan(before);
     await expect.poll(() => activeStreams.size, { timeout: 10000 }).toBe(1);
-    await expect(all).toContainText("2002", { timeout: 15000 });
+    await expect(all).toContainText(String(initialCount + 2001), { timeout: 15000 });
     await search.fill("scale-reconnected");
     await expect(page.getByTestId("user-card-scale-reconnected")).toBeVisible();
     await expect(rows).toHaveCount(1);
