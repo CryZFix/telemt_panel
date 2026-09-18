@@ -16,6 +16,7 @@ import {
 } from "../lib/api/generated/@tanstack/react-query.gen";
 import { apiErrorMessage } from "./apiError";
 import { collectConnectionLinks } from "./connectionLinks";
+import { useBulkQuota } from "./bulkQuotaContext";
 import { SublinkPanel } from "./SublinkPanel";
 import { ConfirmView } from "../ui/ConfirmView";
 import { refreshUsersAfterMutation } from "./refreshUsersAfterMutation";
@@ -66,6 +67,7 @@ export function UserActionSheet({
   anchor,
 }: UserActionSheetProps) {
   const s = useStrings();
+  const bulkQuota = useBulkQuota();
   // Seeded from the intent, never re-derived: "which step am I on" belongs
   // to one opening of the sheet, and a live `user` update from the SSE
   // topic must not knock the admin out of a half-finished confirmation.
@@ -163,7 +165,7 @@ export function UserActionSheet({
           {item(s.people.actions.qr,s.people.actions.openTelegram,<IconLink/>,()=>setView({kind:"qr"}))}
         </section>
         <section><h3>{t.counters}</h3>
-          {item(s.people.actions.resetQuota,t.quotaNote,<IconRefresh/>,()=>setView({kind:"confirm-reset-quota"}),readOnly||!caps.data?.capabilities.quota)}
+          {item(s.people.actions.resetQuota,t.quotaNote,<IconRefresh/>,()=>setView({kind:"confirm-reset-quota"}),readOnly||bulkQuota.running||!caps.data?.capabilities.quota)}
           {item(s.people.actions.resetTraffic,t.trafficNote,<IconRefresh/>,()=>setView({kind:"confirm-reset-traffic"}))}
         </section>
         <section>
@@ -194,7 +196,7 @@ export function UserActionSheet({
           description={s.people.actions.confirmResetQuota}
           confirmLabel={s.people.actions.resetQuota}
           pending={resetQuotaMutation.isPending}
-          disabled={readOnly||!caps.data?.capabilities.quota}
+          disabled={readOnly||bulkQuota.running||!caps.data?.capabilities.quota}
           onCancel={() => setView({ kind: "menu" })}
           onConfirm={() => resetQuotaMutation.mutate({ path: { username: user.username } })}
         />

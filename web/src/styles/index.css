@@ -968,6 +968,8 @@
   .journal-action-axis i { position: relative; z-index: 1; width: 9px; height: 9px; border: 2px solid rgb(var(--surface)); border-radius: 50%; background: rgb(var(--ok)); box-shadow: 0 0 0 2px rgb(var(--ok) / .25); }
   .journal-action.is-accepted .journal-action-axis i { background: rgb(var(--accent)); box-shadow: 0 0 0 2px rgb(var(--accent) / .25); }
   .journal-action.is-rejected .journal-action-axis i { background: rgb(var(--error)); box-shadow: 0 0 0 2px rgb(var(--error) / .25); }
+  .journal-action:is(.is-partial,.is-unknown) .journal-action-axis i { background: rgb(var(--warn)); }
+  .journal-action:is(.is-partial,.is-unknown) .journal-action-card > header > b { color: rgb(var(--warn)); background: rgb(var(--warn) / .1); }
   .journal-action-card { overflow: hidden; border: 1px solid rgb(var(--border)); border-radius: 12px; background: rgb(var(--surface-2)); }
   .journal-action-card > header { display: flex; min-height: 56px; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 11px 13px; }
   .journal-action-card > header div > span { color: rgb(var(--text-faint)); font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }

@@ -121,9 +121,13 @@ describe("computeMeCard", () => {
     expect(view.reason).toEqual({ kind: "coverage", pct: 50 });
   });
 
-  it("names missing writers when coverage is still full", () => {
-    const view = computeMeCard(pool({ total: 44, alive_non_draining: 41 }), quality(), gates());
-    expect(view.reason).toEqual({ kind: "writersLost", missing: 3 });
+  it("reports actual draining writers instead of inventing routes below floor", () => {
+    const view = computeMeCard(pool({ total: 44, alive_non_draining: 41, draining: 3 }), quality(), gates());
+    expect(view.reason).toEqual({ kind: "draining", count: 3 });
+  });
+
+  it("does not infer a route deficit from a pool total delta alone", () => {
+    expect(computeMeCard(pool({ total: 44, alive_non_draining: 41 }), quality(), gates()).reason).toBeNull();
   });
 
   it("falls through to draining, then degraded writers, then an unwell family", () => {
@@ -167,9 +171,8 @@ describe("meReasonText", () => {
 
   it("renders every other reason with its number", () => {
     expect(meReasonText({ kind: "coverage", pct: 58.3 }, en)).toBe("Coverage 58 %");
-    expect(meReasonText({ kind: "writersLost", missing: 3 }, en)).toBe("Routes below writer floor: 3");
     expect(meReasonText({ kind: "draining", count: 2 }, en)).toBe("Writers draining: 2");
-    expect(meReasonText({ kind: "degradedWriters", count: 1 }, en)).toBe("Writers degraded: 1");
+    expect(meReasonText({ kind: "degradedWriters", count: 1 }, en)).toBe("Writers with elevated RTT: 1");
     expect(meReasonText({ kind: "family", family: "v6", state: "suppressed" }, en)).toBe(
       "Family v6: suppressed",
     );

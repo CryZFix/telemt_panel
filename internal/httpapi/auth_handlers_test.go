@@ -74,6 +74,7 @@ func newTestServer(t *testing.T) *Server {
 	hb := hub.New(hub.Config{}, tc, st)
 	t.Cleanup(hb.Close)
 	srv := New(cfg, tc, st, hb, "test")
+	t.Cleanup(srv.quotaResets.Close)
 	t.Cleanup(srv.limiter.Stop)
 	t.Cleanup(srv.subLimiter.Stop)
 	return srv

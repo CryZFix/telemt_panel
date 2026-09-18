@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, ServerSentEventsResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApplyUpdateData, ApplyUpdateErrors, ApplyUpdateResponses, CloseTelemtWebSessionsData, CloseTelemtWebSessionsErrors, CloseTelemtWebSessionsResponses, CreateUserData, CreateUserErrors, CreateUserResponses, DeleteUserData, DeleteUserErrors, DeleteUserResponses, GetAuditData, GetAuditErrors, GetAuditResponses, GetAuthMethodsData, GetAuthMethodsResponses, GetAutoUpdateData, GetAutoUpdateErrors, GetAutoUpdateResponses, GetBrandingIconData, GetBrandingIconResponses, GetBrandingLogoData, GetBrandingLogoErrors, GetBrandingLogoResponses, GetBrandingSettingsData, GetBrandingSettingsErrors, GetBrandingSettingsResponses, GetGeoIpSettingsData, GetGeoIpSettingsErrors, GetGeoIpSettingsResponses, GetHealthData, GetHealthResponses, GetHistoryData, GetHistoryErrors, GetHistoryEventsData, GetHistoryEventsErrors, GetHistoryEventsResponses, GetHistoryResponses, GetHostData, GetHostResponses, GetMeData, GetMeErrors, GetMeResponses, GetPanelTlsConfigData, GetPanelTlsConfigErrors, GetPanelTlsConfigResponses, GetPanelTlsData, GetPanelTlsErrors, GetPanelTlsResponses, GetPublicBrandingData, GetPublicBrandingResponses, GetSnapshotData, GetSnapshotErrors, GetSnapshotResponses, GetStorageSettingsData, GetStorageSettingsResponses, GetSubscriptionPageData, GetSubscriptionPageErrors, GetSubscriptionPageResponses, GetTelemtConfigCatalogData, GetTelemtConfigCatalogResponses, GetTelemtConfigData, GetTelemtConfigErrors, GetTelemtConfigResponses, GetTelemtConfigTomlData, GetTelemtConfigTomlErrors, GetTelemtConfigTomlResponses, GetTelemtInfoData, GetTelemtInfoResponses, GetTelemtReloadStatusData, GetTelemtReloadStatusErrors, GetTelemtReloadStatusResponses, GetTelemtTlsFingerprintsData, GetTelemtTlsFingerprintsErrors, GetTelemtTlsFingerprintsResponses, GetTelemtWebAccessData, GetTelemtWebAccessErrors, GetTelemtWebAccessResponses, GetTelemtWebOperationData, GetTelemtWebOperationErrors, GetTelemtWebOperationResponses, GetTelemtWebSessionData, GetTelemtWebSessionErrors, GetTelemtWebSessionResponses, GetTelemtWebSessionsData, GetTelemtWebSessionsErrors, GetTelemtWebSessionsResponses, GetTelemtZeroData, GetTelemtZeroErrors, GetTelemtZeroResponses, GetTrafficSummaryData, GetTrafficSummaryErrors, GetTrafficSummaryResponses, GetTrafficUsersData, GetTrafficUsersErrors, GetTrafficUsersResponses, GetUpdatesData, GetUpdatesResponses, GetUserData, GetUserErrors, GetUserIpHistoryData, GetUserIpHistoryErrors, GetUserIpHistoryResponses, GetUserResponses, GetUserSublinkData, GetUserSublinkErrors, GetUserSublinkResponses, GetUserTrafficHistoryData, GetUserTrafficHistoryErrors, GetUserTrafficHistoryResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListUsersData, ListUsersErrors, ListUsersResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, PatchTelemtConfigData, PatchTelemtConfigErrors, PatchTelemtConfigResponses, PatchTelemtConfigTomlData, PatchTelemtConfigTomlErrors, PatchTelemtConfigTomlResponses, PatchUserData, PatchUserErrors, PatchUserResponses, PreparePanelTlsData, PreparePanelTlsErrors, PreparePanelTlsResponses, PreviewTelemtConfigTomlData, PreviewTelemtConfigTomlErrors, PreviewTelemtConfigTomlResponses, PurgeStorageHistoryData, PurgeStorageHistoryErrors, PurgeStorageHistoryResponses, PutAutoUpdateData, PutAutoUpdateErrors, PutAutoUpdateResponses, PutBrandingSettingsData, PutBrandingSettingsErrors, PutBrandingSettingsResponses, PutGeoIpSettingsData, PutGeoIpSettingsErrors, PutGeoIpSettingsResponses, PutPanelTlsConfigData, PutPanelTlsConfigErrors, PutPanelTlsConfigResponses, PutStorageSettingsData, PutStorageSettingsErrors, PutStorageSettingsResponses, PutTelemtUserWebAccessData, PutTelemtUserWebAccessErrors, PutTelemtUserWebAccessResponses, RegenerateUserSublinkData, RegenerateUserSublinkErrors, RegenerateUserSublinkResponses, ReloadTelemtData, ReloadTelemtErrors, ReloadTelemtResponses, ResetAllUserTrafficData, ResetAllUserTrafficErrors, ResetAllUserTrafficResponses, ResetUserIpHistoryData, ResetUserIpHistoryErrors, ResetUserIpHistoryResponses, ResetUserQuotaData, ResetUserQuotaErrors, ResetUserQuotaResponses, ResetUserTrafficData, ResetUserTrafficErrors, ResetUserTrafficResponses, RestartPanelTlsData, RestartPanelTlsErrors, RestartPanelTlsResponses, RestartTelemtServiceData, RestartTelemtServiceErrors, RestartTelemtServiceResponses, RevokeOtherSessionsData, RevokeOtherSessionsErrors, RevokeOtherSessionsResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, RotateUserSecretData, RotateUserSecretErrors, RotateUserSecretResponses, SetUserEnabledData, SetUserEnabledErrors, SetUserEnabledResponses, StreamEventsData, StreamEventsErrors, StreamEventsResponse, StreamEventsResponses, StreamLogsData, StreamLogsErrors, StreamLogsResponse, StreamLogsResponses, TailLogsData, TailLogsErrors, TailLogsResponses, UpdateGeoIpData, UpdateGeoIpErrors, UpdateGeoIpResponses, WebauthnDeleteCredentialData, WebauthnDeleteCredentialErrors, WebauthnDeleteCredentialResponses, WebauthnLoginBeginData, WebauthnLoginBeginErrors, WebauthnLoginBeginResponses, WebauthnLoginFinishData, WebauthnLoginFinishErrors, WebauthnLoginFinishResponses, WebauthnRegisterBeginData, WebauthnRegisterBeginErrors, WebauthnRegisterBeginResponses, WebauthnRegisterFinishData, WebauthnRegisterFinishErrors, WebauthnRegisterFinishResponses } from './types.gen';
+import type { ApplyUpdateData, ApplyUpdateErrors, ApplyUpdateResponses, CloseTelemtWebSessionsData, CloseTelemtWebSessionsErrors, CloseTelemtWebSessionsResponses, CreateUserData, CreateUserErrors, CreateUserResponses, DeleteUserData, DeleteUserErrors, DeleteUserResponses, GetAuditData, GetAuditErrors, GetAuditResponses, GetAuthMethodsData, GetAuthMethodsResponses, GetAutoUpdateData, GetAutoUpdateErrors, GetAutoUpdateResponses, GetBrandingIconData, GetBrandingIconResponses, GetBrandingLogoData, GetBrandingLogoErrors, GetBrandingLogoResponses, GetBrandingSettingsData, GetBrandingSettingsErrors, GetBrandingSettingsResponses, GetBulkQuotaResetData, GetBulkQuotaResetErrors, GetBulkQuotaResetResponses, GetGeoIpSettingsData, GetGeoIpSettingsErrors, GetGeoIpSettingsResponses, GetHealthData, GetHealthResponses, GetHistoryData, GetHistoryErrors, GetHistoryEventsData, GetHistoryEventsErrors, GetHistoryEventsResponses, GetHistoryResponses, GetHostData, GetHostResponses, GetMeData, GetMeErrors, GetMeResponses, GetPanelTlsConfigData, GetPanelTlsConfigErrors, GetPanelTlsConfigResponses, GetPanelTlsData, GetPanelTlsErrors, GetPanelTlsResponses, GetPublicBrandingData, GetPublicBrandingResponses, GetQuotaScheduleData, GetQuotaScheduleErrors, GetQuotaScheduleResponses, GetSnapshotData, GetSnapshotErrors, GetSnapshotResponses, GetStorageSettingsData, GetStorageSettingsResponses, GetSubscriptionPageData, GetSubscriptionPageErrors, GetSubscriptionPageResponses, GetTelemtConfigCatalogData, GetTelemtConfigCatalogResponses, GetTelemtConfigData, GetTelemtConfigErrors, GetTelemtConfigResponses, GetTelemtConfigTomlData, GetTelemtConfigTomlErrors, GetTelemtConfigTomlResponses, GetTelemtInfoData, GetTelemtInfoResponses, GetTelemtReloadStatusData, GetTelemtReloadStatusErrors, GetTelemtReloadStatusResponses, GetTelemtTlsFingerprintsData, GetTelemtTlsFingerprintsErrors, GetTelemtTlsFingerprintsResponses, GetTelemtWebAccessData, GetTelemtWebAccessErrors, GetTelemtWebAccessResponses, GetTelemtWebOperationData, GetTelemtWebOperationErrors, GetTelemtWebOperationResponses, GetTelemtWebSessionData, GetTelemtWebSessionErrors, GetTelemtWebSessionResponses, GetTelemtWebSessionsData, GetTelemtWebSessionsErrors, GetTelemtWebSessionsResponses, GetTelemtZeroData, GetTelemtZeroErrors, GetTelemtZeroResponses, GetTrafficSummaryData, GetTrafficSummaryErrors, GetTrafficSummaryResponses, GetTrafficUsersData, GetTrafficUsersErrors, GetTrafficUsersResponses, GetUpdatesData, GetUpdatesResponses, GetUserData, GetUserErrors, GetUserIpHistoryData, GetUserIpHistoryErrors, GetUserIpHistoryResponses, GetUserQuotaScheduleData, GetUserQuotaScheduleErrors, GetUserQuotaScheduleResponses, GetUserResponses, GetUserSublinkData, GetUserSublinkErrors, GetUserSublinkResponses, GetUserTrafficHistoryData, GetUserTrafficHistoryErrors, GetUserTrafficHistoryResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListUsersData, ListUsersErrors, ListUsersResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, PatchTelemtConfigData, PatchTelemtConfigErrors, PatchTelemtConfigResponses, PatchTelemtConfigTomlData, PatchTelemtConfigTomlErrors, PatchTelemtConfigTomlResponses, PatchUserData, PatchUserErrors, PatchUserResponses, PrepareBulkQuotaResetData, PrepareBulkQuotaResetErrors, PrepareBulkQuotaResetResponses, PreparePanelTlsData, PreparePanelTlsErrors, PreparePanelTlsResponses, PreviewQuotaScheduleData, PreviewQuotaScheduleErrors, PreviewQuotaScheduleResponses, PreviewTelemtConfigTomlData, PreviewTelemtConfigTomlErrors, PreviewTelemtConfigTomlResponses, PurgeStorageHistoryData, PurgeStorageHistoryErrors, PurgeStorageHistoryResponses, PutAutoUpdateData, PutAutoUpdateErrors, PutAutoUpdateResponses, PutBrandingSettingsData, PutBrandingSettingsErrors, PutBrandingSettingsResponses, PutGeoIpSettingsData, PutGeoIpSettingsErrors, PutGeoIpSettingsResponses, PutPanelTlsConfigData, PutPanelTlsConfigErrors, PutPanelTlsConfigResponses, PutStorageSettingsData, PutStorageSettingsErrors, PutStorageSettingsResponses, PutTelemtUserWebAccessData, PutTelemtUserWebAccessErrors, PutTelemtUserWebAccessResponses, RegenerateUserSublinkData, RegenerateUserSublinkErrors, RegenerateUserSublinkResponses, ReloadTelemtData, ReloadTelemtErrors, ReloadTelemtResponses, ResetAllUserTrafficData, ResetAllUserTrafficErrors, ResetAllUserTrafficResponses, ResetUserIpHistoryData, ResetUserIpHistoryErrors, ResetUserIpHistoryResponses, ResetUserQuotaData, ResetUserQuotaErrors, ResetUserQuotaResponses, ResetUserTrafficData, ResetUserTrafficErrors, ResetUserTrafficResponses, RestartPanelTlsData, RestartPanelTlsErrors, RestartPanelTlsResponses, RestartTelemtServiceData, RestartTelemtServiceErrors, RestartTelemtServiceResponses, RevokeOtherSessionsData, RevokeOtherSessionsErrors, RevokeOtherSessionsResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, RotateUserSecretData, RotateUserSecretErrors, RotateUserSecretResponses, SaveQuotaScheduleData, SaveQuotaScheduleErrors, SaveQuotaScheduleResponses, SaveUserQuotaScheduleData, SaveUserQuotaScheduleErrors, SaveUserQuotaScheduleResponses, SetUserEnabledData, SetUserEnabledErrors, SetUserEnabledResponses, StartBulkQuotaResetData, StartBulkQuotaResetErrors, StartBulkQuotaResetResponses, StreamEventsData, StreamEventsErrors, StreamEventsResponse, StreamEventsResponses, StreamLogsData, StreamLogsErrors, StreamLogsResponse, StreamLogsResponses, TailLogsData, TailLogsErrors, TailLogsResponses, UpdateGeoIpData, UpdateGeoIpErrors, UpdateGeoIpResponses, WebauthnDeleteCredentialData, WebauthnDeleteCredentialErrors, WebauthnDeleteCredentialResponses, WebauthnLoginBeginData, WebauthnLoginBeginErrors, WebauthnLoginBeginResponses, WebauthnLoginFinishData, WebauthnLoginFinishErrors, WebauthnLoginFinishResponses, WebauthnRegisterBeginData, WebauthnRegisterBeginErrors, WebauthnRegisterBeginResponses, WebauthnRegisterFinishData, WebauthnRegisterFinishErrors, WebauthnRegisterFinishResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -250,6 +250,112 @@ export const webauthnDeleteCredential = <ThrowOnError extends boolean = false>(o
         }],
     url: '/api/auth/webauthn/credentials/{credentialId}',
     ...options
+});
+
+export const getQuotaSchedule = <ThrowOnError extends boolean = false>(options?: Options<GetQuotaScheduleData, ThrowOnError>): RequestResult<GetQuotaScheduleResponses, GetQuotaScheduleErrors, ThrowOnError> => (options?.client ?? client).get<GetQuotaScheduleResponses, GetQuotaScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'panel_session',
+            type: 'apiKey'
+        }],
+    url: '/api/settings/quota-schedule',
+    ...options
+});
+
+export const saveQuotaSchedule = <ThrowOnError extends boolean = false>(options: Options<SaveQuotaScheduleData, ThrowOnError>): RequestResult<SaveQuotaScheduleResponses, SaveQuotaScheduleErrors, ThrowOnError> => (options.client ?? client).put<SaveQuotaScheduleResponses, SaveQuotaScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'panel_session',
+            type: 'apiKey'
+        }],
+    url: '/api/settings/quota-schedule',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const previewQuotaSchedule = <ThrowOnError extends boolean = false>(options: Options<PreviewQuotaScheduleData, ThrowOnError>): RequestResult<PreviewQuotaScheduleResponses, PreviewQuotaScheduleErrors, ThrowOnError> => (options.client ?? client).post<PreviewQuotaScheduleResponses, PreviewQuotaScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'panel_session',
+            type: 'apiKey'
+        }],
+    url: '/api/settings/quota-schedule/preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const getUserQuotaSchedule = <ThrowOnError extends boolean = false>(options: Options<GetUserQuotaScheduleData, ThrowOnError>): RequestResult<GetUserQuotaScheduleResponses, GetUserQuotaScheduleErrors, ThrowOnError> => (options.client ?? client).get<GetUserQuotaScheduleResponses, GetUserQuotaScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'panel_session',
+            type: 'apiKey'
+        }],
+    url: '/api/users/{username}/quota-schedule',
+    ...options
+});
+
+export const saveUserQuotaSchedule = <ThrowOnError extends boolean = false>(options: Options<SaveUserQuotaScheduleData, ThrowOnError>): RequestResult<SaveUserQuotaScheduleResponses, SaveUserQuotaScheduleErrors, ThrowOnError> => (options.client ?? client).put<SaveUserQuotaScheduleResponses, SaveUserQuotaScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'panel_session',
+            type: 'apiKey'
+        }],
+    url: '/api/users/{username}/quota-schedule',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Prepare all configured users with a fresh revision. No quota is changed. Confirmation expires in two minutes.
+ */
+export const prepareBulkQuotaReset = <ThrowOnError extends boolean = false>(options?: Options<PrepareBulkQuotaResetData, ThrowOnError>): RequestResult<PrepareBulkQuotaResetResponses, PrepareBulkQuotaResetErrors, ThrowOnError> => (options?.client ?? client).post<PrepareBulkQuotaResetResponses, PrepareBulkQuotaResetErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'panel_session',
+            type: 'apiKey'
+        }],
+    url: '/api/users/operations/quota-reset/prepare',
+    ...options
+});
+
+/**
+ * Current/last in-memory operation; null before any start. A requested id that was lost/replaced returns 404, never fabricated success.
+ */
+export const getBulkQuotaReset = <ThrowOnError extends boolean = false>(options?: Options<GetBulkQuotaResetData, ThrowOnError>): RequestResult<GetBulkQuotaResetResponses, GetBulkQuotaResetErrors, ThrowOnError> => (options?.client ?? client).get<GetBulkQuotaResetResponses, GetBulkQuotaResetErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'panel_session',
+            type: 'apiKey'
+        }],
+    url: '/api/users/operations/quota-reset',
+    ...options
+});
+
+/**
+ * Start one sequential operation for the confirmed revision. An accepted token returns the same operation when repeated, never a second reset. No automatic retry or restart recovery; limits and panel traffic/IP history stay unchanged.
+ *
+ */
+export const startBulkQuotaReset = <ThrowOnError extends boolean = false>(options: Options<StartBulkQuotaResetData, ThrowOnError>): RequestResult<StartBulkQuotaResetResponses, StartBulkQuotaResetErrors, ThrowOnError> => (options.client ?? client).post<StartBulkQuotaResetResponses, StartBulkQuotaResetErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'panel_session',
+            type: 'apiKey'
+        }],
+    url: '/api/users/operations/quota-reset',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**

@@ -14,6 +14,8 @@ import { useNow } from "./useNow";
 import { UserCard } from "./UserCard";
 import { UserActionSheet, type ActionSheetIntent } from "./UserActionSheet";
 import { PeopleContext } from "./PeopleContext";
+import { useBulkQuota } from "./bulkQuotaContext";
+import { IconMore } from "../ui/icons";
 import type { SwipeSide } from "./useUserRowGestures";
 import {
   computeUserStatus,
@@ -44,6 +46,7 @@ export function PeopleList() {
   const s = useStrings();
   const topic = useUsersTopic();
   const access = useContext(PeopleContext);
+  const bulkQuota = useBulkQuota();
   const connection = useConnectionState();
   const now = useNow();
   const navigate = useNavigate();
@@ -167,7 +170,7 @@ export function PeopleList() {
             <div className="flex flex-wrap items-baseline gap-x-2"><h1 className="text-xl font-extrabold tracking-tight text-text md:text-title">{s.people.title}</h1><span className="font-mono text-meta tabular-nums text-text-muted">{counts.all}</span></div>
           </div>
         </div>
-        <Button className="shrink-0" disabled={access.readOnly} onClick={create}><IconPlus className="h-4 w-4" />{s.people.create}</Button>
+        <div className="flex shrink-0 gap-2"><Button aria-label={s.people.create} disabled={access.readOnly} onClick={create}><IconPlus className="h-4 w-4" /><span className="hidden min-[440px]:inline">{s.people.create}</span></Button><button type="button" className="user-menu-trigger" aria-label={s.people.bulkQuota.menu} onClick={e=>bulkQuota.openMenu(e.currentTarget.getBoundingClientRect())}><IconMore/></button></div>
       </header>
 
       <div className="flex min-h-0 flex-1 gap-3">
@@ -215,7 +218,7 @@ export function PeopleList() {
                           now={now}
                           gesturesEnabled={phoneListLayout}
                           swipeSide={swiped?.username===user.username?swiped.side:null}
-                          canResetQuota={access.canResetQuota&&!topic.stale}
+                          canResetQuota={access.canResetQuota&&!topic.stale&&!bulkQuota.running}
                           canToggle={access.canToggle&&!topic.stale}
                           onOpen={() => openPerson(user)}
                           onActions={anchor => openActions(user,"menu",anchor)}

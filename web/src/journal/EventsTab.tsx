@@ -68,7 +68,7 @@ export function ActionsTab() {
         .includes(needle);
     });
   }, [entries, filter, s, search]);
-  const attentionCount = entries.filter((entry) => entry.outcome === "rejected").length;
+  const attentionCount = entries.filter((entry) => ["rejected","partial","unknown"].includes(entry.outcome)).length;
 
   return (
     <section className="journal-actions-pane">

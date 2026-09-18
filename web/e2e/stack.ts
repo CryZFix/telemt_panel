@@ -76,8 +76,8 @@ async function waitForHealth(url: string, timeoutMs: number): Promise<void> {
 }
 
 // startStack: build telemt-mock, hash the admin password, write a scratch
-// config.toml (memory store, data_dir="" — nothing touches disk state
-// beyond this run's own temp dir), and launch both processes. Throws with
+// config.toml (memory history and technical state inside this run's own
+// temp directory), and launch both processes. Throws with
 // a clear message if the panel binary is missing — this module builds
 // nothing for the panel itself (documented in web/README.md: run
 // `make build` from the repo root first).
@@ -101,7 +101,7 @@ export async function startStack(): Promise<Stack> {
     configPath,
     [
       `listen = "127.0.0.1:${PANEL_PORT}"`,
-      `data_dir = ""`,
+      `data_dir = "${path.join(tmpDir, "state")}"`,
       "",
       "[telemt]",
       `url = "${MOCK_URL}"`,

@@ -18,7 +18,6 @@ export type MeCardState = "healthy" | "degraded" | "fallback";
 export type MeReason =
   | { kind: "fallback"; detail?: string }
   | { kind: "coverage"; pct: number }
-  | { kind: "writersLost"; missing: number }
   | { kind: "draining"; count: number }
   | { kind: "degradedWriters"; count: number }
   | { kind: "family"; family: string; state: string };
@@ -82,8 +81,7 @@ export function meQualitySummary(quality: RuntimeMeQuality | undefined): {
 }
 
 // The reason ladder, worst first: traffic bypassing ME entirely outranks a
-// coverage shortfall, which outranks writers that are merely missing, which
-// outranks the ones that are on their way out or unwell. The first match
+// coverage shortfall, followed by draining or slow writers. The first match
 // wins — the card has room for ONE line, and the ME page has the rest.
 function firstReason(
   pool: RuntimeMePoolState,
@@ -96,9 +94,8 @@ function firstReason(
     return { kind: "fallback", ...(detail ? { detail } : {}) };
   }
   if (coveragePct !== null && coveragePct < 100) return { kind: "coverage", pct: coveragePct };
-  if (pool.writers.alive_non_draining < pool.writers.total) {
-    return { kind: "writersLost", missing: pool.writers.total - pool.writers.alive_non_draining };
-  }
+  // Telemt 3.5.5 defines alive_non_draining = total - draining. That delta
+  // is not a count of failed routes, missing writers, or DCs below floor_min.
   if (pool.writers.draining > 0) return { kind: "draining", count: pool.writers.draining };
   if (pool.writers.degraded > 0) return { kind: "degradedWriters", count: pool.writers.degraded };
   const unhealthy = quality?.family_states.find((f) => f.state !== "healthy");
@@ -152,13 +149,21 @@ export function meReasonText(reason: MeReason, s: Dict): string {
       return reason.detail ? `${t.fallback} (${reason.detail})` : t.fallback;
     case "coverage":
       return fill(t.coverage, { pct: formatNumber(s, Math.round(reason.pct)) });
-    case "writersLost":
-      return fill(t.writersLost, { count: formatNumber(s, reason.missing) });
     case "draining":
       return fill(t.draining, { count: formatNumber(s, reason.count) });
     case "degradedWriters":
       return fill(t.degradedWriters, { count: formatNumber(s, reason.count) });
     case "family":
       return fill(t.family, { family: reason.family, state: reason.state });
+  }
+}
+
+/** Explain the runtime flag without equating pool maintenance with an outage. */
+export function meReasonHint(reason: MeReason, s: Dict): string | undefined {
+  switch(reason.kind){
+    case "draining": return s.pulse.mePool.explanation.draining;
+    case "degradedWriters": return s.pulse.mePool.explanation.degradedWriters;
+    case "coverage": return s.pulse.mePool.explanation.coverage;
+    default: return undefined;
   }
 }

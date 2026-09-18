@@ -272,6 +272,9 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		detail = "web_profiles=removed"
 	}
 	s.appendAudit(r, "user.delete", username, detail)
+	if err := s.quotaSchedules.ForgetUser(username); err != nil {
+		slog.Error("delete-user: removing quota schedule override", "username", username, "err", err)
+	}
 	s.pokeUsersAfterMutation()
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -283,9 +286,9 @@ func (s *Server) handleResetQuota(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), subpageRequestTimeout)
 	defer cancel()
 
-	q, err := s.tc.ResetQuota(ctx, username)
+	q, err := s.quotaResets.ResetSingle(ctx, username)
 	if err != nil {
-		writeTelemtError(w, err, false)
+		writeQuotaResetError(w, err)
 		return
 	}
 	s.appendAudit(r, "quota.reset", username, "")

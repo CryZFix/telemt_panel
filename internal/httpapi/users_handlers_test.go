@@ -359,6 +359,7 @@ func newUsersTestServer(t *testing.T, fake *fakeTelemt, subpageEnabled bool) (*S
 	t.Cleanup(hb.Close)
 
 	srv := New(cfg, tc, st, hb, "test")
+	t.Cleanup(srv.quotaResets.Close)
 	t.Cleanup(srv.limiter.Stop)
 	t.Cleanup(srv.subLimiter.Stop)
 

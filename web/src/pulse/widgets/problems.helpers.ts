@@ -1,7 +1,7 @@
 import { fill, type Dict } from "../../i18n";
 import type { DcStatusData, StatsSnapshot } from "../../realtime/topics";
 import type { DiagDomain } from "../types";
-import { meReasonText, type MeReason } from "./mePool.helpers";
+import { meReasonText, meReasonHint, type MeReason } from "./mePool.helpers";
 
 export interface ProblemItem {
   key: string;
@@ -29,14 +29,15 @@ export function addMeRuntimeProblem(
   if (!reason) return [...items];
   const coveredElsewhere =
     (reason.kind === "fallback" && items.some((item) => item.key === "me_direct_fallback")) ||
-    ((reason.kind === "coverage" || reason.kind === "writersLost") &&
+    (reason.kind === "coverage" &&
       items.some((item) => item.key.startsWith("me_coverage_low")));
   if (coveredElsewhere) return [...items];
   return [
     {
       key: `me_runtime_${reason.kind}`,
-      label: s.pulse.problems.meRuntimeDegraded,
+      label: reason.kind === "draining" ? s.pulse.problems.meRuntimeDraining : reason.kind === "degradedWriters" ? s.pulse.problems.meRuntimeLatency : s.pulse.problems.meRuntimeDegraded,
       detail: meReasonText(reason, s),
+      hint: meReasonHint(reason, s),
     },
     ...items,
   ];

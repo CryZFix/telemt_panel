@@ -1,5 +1,6 @@
 import type { Dict } from "./dict";
 import { geoipEn } from "./geoip.en";
+import { quotaScheduleEn } from "./quotaSchedule.en";
 
 // The English dictionary. Typed as `Dict` — the shape comes from ru.ts, so
 // a key added there is a compile error here until it is translated, and a
@@ -11,6 +12,7 @@ import { geoipEn } from "./geoip.en";
 // Reissue, Белый список → Allowlist. Telemt's own identifiers (config keys,
 // ME, DC, Fake-TLS, hardswap, PROXY protocol) are never translated.
 export const en: Dict = {
+  quotaSchedule: quotaScheduleEn,
   geoip: geoipEn,
   locale: "en",
   app: {
@@ -116,6 +118,14 @@ export const en: Dict = {
     placeholderDescription: "This screen arrives in one of the next tasks.",
   },
   people: {
+    bulkQuota: {
+      unconfirmed:"Telemt did not confirm the reset outcome",
+      empty:"There are no users whose quota usage can be reset.",
+      menu:"User list actions", action:"Reset used quotas for everyone", title:"Reset used quotas", all:"All users · {count}", scope:"Includes disabled accounts and users without limits. Search and filters do not restrict this action.",
+      change:"Each user's quota consumption", preserved:"Stays unchanged", preservedNote:"Limits and expiry · panel traffic totals and graphs · IP history · links and blocked state", effect:"Users who exhausted their quota can connect again unless other restrictions apply. New consumption may start immediately.", agree:"I confirm resetting all users ({count}). Completed resets cannot be undone.", start:"Reset everyone", refresh:"Reload user list", checking:"Checking users and configuration revision…",
+      running:"Reset in progress", stopped:"Operation stopped", partial:"Completed with refusals", completed:"Used quotas reset", progressNote:"You can close this dialog and continue working. Progress remains above the list.", resultNote:"Limits, history and access settings are preserved.", processed:"of {count} processed", confirmed:"Confirmed", rejected:"Rejected", unknown:"Unknown", waiting:"Waiting", notSent:"Not sent", check:"Open results", collapse:"Minimize", done:"Done", review:"Review required", exceptionPage:"Records {start}–{end} of {total}", previous:"Previous", next:"Next",
+      unknownNote:"No automatic retry: Telemt may have reset the quota, including before a disk-write error. Check the user's state first.", remainingNote:"The remaining {count} requests were not sent. Completed resets are not rolled back.", noRetry:"A new run would reset everyone again. Use individual user pages for targeted actions.", current:"Check current operation", lost:"Operation tracking is unavailable or stale. This does not mean the reset was cancelled; do not retry automatically.", paused:"Connection to the panel was lost. This is the last known progress; the operation may have continued.", openUser:"Open user", serverStopped:"Panel stopped", expiry:"Confirmation is valid for two minutes. Configuration changes require a new confirmation.",
+    },
     workspace: {
       overview:"Overview", access:"Access", ips:"IP history", settings:"Settings", back:"Back to users",
       quickLinks:"Quick links", format:"Link format", formatHint:"Changes the format for this user only. WEB always uses tg://webproxy.",
@@ -612,6 +622,8 @@ export const en: Dict = {
       meCoverageLowDetail: "{alive}/{floor} writers, {pct}% coverage",
       meSplitTraffic: "Some connections are going direct, bypassing ME",
       meRuntimeDegraded: "The ME subsystem is degraded",
+      meRuntimeDraining: "ME connections are draining",
+      meRuntimeLatency: "ME connection latency increased",
       deltaDetail: "+{delta} over 15 min · {total} lifetime",
       lifetimeCounters: "Lifetime counters: {value} (see Connections)",
       more: "more",
@@ -681,12 +693,16 @@ export const en: Dict = {
       draining: "draining",
       refill: "refill",
       allAlive: "All writers alive",
+      explanation: {
+        draining: "Telemt is retiring old connections during pool replacement or reconfiguration. Draining alone does not mean insufficient DC coverage.",
+        degradedWriters: "Smoothed RTT on Telemt → ME connections exceeded twice their adaptive baseline. This is not a fixed millisecond threshold or a count of lost routes.",
+        coverage: "Fewer ME connections are available than required. Inspect individual RPC/Media directions in data centers.",
+      },
       reason: {
         fallback: "Traffic is going direct, bypassing ME",
         coverage: "Coverage {pct} %",
-        writersLost: "Routes below writer floor: {count}",
         draining: "Writers draining: {count}",
-        degradedWriters: "Writers degraded: {count}",
+        degradedWriters: "Writers with elevated RTT: {count}",
         family: "Family {family}: {state}",
       },
     },
@@ -2372,6 +2388,8 @@ export const en: Dict = {
       showDetails: "Show details",
       hideDetails: "Hide details",
       outcomes: {
+        partial: "Incomplete",
+        unknown: "Review required",
         success: "Successful",
         accepted: "Accepted",
         rejected: "Rejected",
@@ -3570,6 +3588,13 @@ export const en: Dict = {
     log_source_error: "Couldn't connect to the log source.",
     invalid_webauthn_origin: "The browser address differs from the origin detected by the panel. Behind an HTTPS proxy, check trusted_proxies and X-Forwarded-Proto/Host headers. Restart the panel after correcting the configuration and try again.",
     auth_disabled: "Authentication is disabled in the panel configuration. Session and passkey management is unavailable.",
+    quota_reset_busy: "A quota operation is already in progress. Wait for its result.",
+    quota_confirmation_expired: "Confirmation expired or was replaced. Reload and confirm the complete user list.",
+    quota_operation_unavailable: "Operation tracking is unavailable; the panel may have restarted. Completed resets are not rolled back. Do not retry them automatically.",
+    invalid_quota_schedule: "Check the interval, date, cron expression and timezone: future runs could not be calculated.",
+    quota_schedule_conflict: "The schedule changed. Load current settings before saving.",
+    quota_schedule_storage: "Auto-reset requires durable panel technical state (data_dir). Check disk availability and write permissions.",
+    quota_schedule_unavailable: "Schedule state or the Telemt quota API is unavailable. Auto-reset is paused; check connectivity and panel logs.",
     invalid_webauthn_challenge: "This passkey request expired or was already used. Start again.",
     invalid_webauthn_response: "The authenticator response could not be verified.",
     webauthn_credential_exists: "This passkey is already registered.",
@@ -3640,6 +3665,18 @@ export const en: Dict = {
     "user.ip_history_reset": "Cleared user IP address history",
     "traffic.reset": "Reset all user traffic tracking",
     "quota.reset": "Reset quota",
+    "quota.reset_all.started": "Started resetting used quotas for all users",
+    "quota.schedule.global": "Changed the common quota reset schedule",
+    "quota.schedule.user": "Changed the user's quota reset schedule",
+    "quota.schedule.started": "Started scheduled quota resets",
+    "quota.schedule.completed": "Scheduled quota resets completed",
+    "quota.schedule.partial": "Scheduled quota reset completed with refusals",
+    "quota.schedule.stopped": "Scheduled quota reset stopped",
+    "quota.schedule.interrupted": "Scheduled quota reset interrupted: review results",
+    "quota.reset_all.completed": "Reset used quotas for all users",
+    "quota.reset_all.partial": "Bulk quota reset completed with refusals",
+    "quota.reset_all.stopped": "Bulk quota reset stopped",
+    "quota.reset_all.interrupted": "Bulk quota reset interrupted: review results",
     "secret.rotate": "Changed secret",
     "user.enabled": "Changed user status",
     "sublink.rotate": "Reissued subscription link",

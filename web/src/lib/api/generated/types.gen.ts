@@ -4,6 +4,99 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type QuotaScheduleRule = {
+    kind: 'interval' | 'cron';
+    days?: number;
+    start?: string;
+    /**
+     * Local HH:mm in the panel schedule timezone.
+     */
+    time?: string;
+    /**
+     * Five fields; no seconds, command, macros or extensions. Day-of-month and weekday use OR.
+     */
+    cron?: string;
+};
+
+export type GlobalQuotaSchedule = {
+    enabled: boolean;
+    /**
+     * IANA timezone; server resolves to the current server zone on save.
+     */
+    timezone: string;
+    rule: QuotaScheduleRule;
+};
+
+export type UserQuotaSchedule = {
+    mode: 'inherit' | 'custom' | 'off';
+    rule?: QuotaScheduleRule;
+};
+
+export type ScheduledQuotaRun = {
+    id: string;
+    state: string;
+    started_at: string;
+    finished_at?: string;
+    total: number;
+    /**
+     * Absent when a restart prevented observing the result; not zero.
+     */
+    confirmed?: number;
+    unknown?: number;
+    rejected?: number;
+    remaining?: number;
+    reason?: string;
+};
+
+export type QuotaScheduleView = {
+    revision: string;
+    global: GlobalQuotaSchedule;
+    policy?: UserQuotaSchedule;
+    effective: boolean;
+    server_timezone: string;
+    effective_timezone: string;
+    durable: boolean;
+    next_runs: Array<string>;
+    next_due?: string;
+    custom_count: number;
+    excluded_count: number;
+    last?: ScheduledQuotaRun;
+    error?: string;
+};
+
+export type QuotaResetConfirmation = {
+    token: string;
+    total: number;
+    expires_at: string;
+};
+
+export type QuotaResetIssue = {
+    username: string;
+    outcome: 'rejected' | 'unknown';
+    code: 'not_found' | 'read_only' | 'revision_conflict' | 'telemt_auth_failed' | 'capability_absent' | 'reset_unconfirmed';
+};
+
+export type QuotaResetOperation = {
+    id: string;
+    /**
+     * Absent for manually confirmed operations.
+     */
+    trigger?: 'schedule';
+    state: 'running' | 'completed' | 'stopped';
+    total: number;
+    processed: number;
+    confirmed: number;
+    rejected: number;
+    unknown: number;
+    remaining: number;
+    reason: string;
+    started_at: string;
+    finished_at?: string;
+    issues: Array<QuotaResetIssue>;
+    issues_total: number;
+    next_offset?: number;
+};
+
 export type BrandingConfig = {
     title: string;
     logo_mode: 'default' | 'custom' | 'hidden';
@@ -110,10 +203,10 @@ export type PanelTlsStatus = {
 
 export type Error = {
     /**
-     * Machine code. Panel codes actually emitted today (grepped from every WriteError call site): bad_request, invalid_credentials, rate_limited, session_expired, csrf_rejected, auth_disabled, internal_error, not_found, telemt_unreachable, capability_absent, capability_unavailable, manual_restart_required, update_locked, sublink_unavailable, log_tail_unavailable, log_stream_unavailable, log_source_error, invalid_webauthn_origin, invalid_webauthn_challenge, invalid_webauthn_response, webauthn_credential_exists, passkey_unavailable, invalid_toml, invalid_config_path, config_unset_unsupported, no_changes, toml_projection_failed. capability_absent (501) vs capability_unavailable (503) are deliberately distinct, not aliases: capability_absent means the route itself doesn't exist on this Telemt build (a bare 404/405 with no error envelope — detected reactively, after attempting the call: rotate-secret, enable/disable, POST /api/telemt/reload, GET /api/telemt/reload/{id}); capability_unavailable means the route exists but the feature behind it is switched off on this Telemt — either known up front from the SDK's cached Capabilities probe (GET/PATCH /api/telemt/config, config_api) or reported by the response itself (GET /api/telemt/tls-fingerprints, whose enabled:false means runtime_edge_enabled is off; read from the response rather than probed so an unreachable Telemt still maps to 502 telemt_unreachable). Reserved for milestones not yet implemented: telemt_auth_failed (superseded on /api/telemt/info by a reachable:false body, not an error status — kept here for /api/telemt/config, M3). A well-formed Telemt *APIError whose status is 4xx and isn't otherwise mapped above is passed through verbatim with Telemt's own code — notably user_exists, last_user_forbidden, read_only, revision_conflict, reload_in_progress, reload_not_found, ambiguous_listeners (the latter two absent from Telemt's own documented error-code table but confirmed against its source, M3), plus any other code in Telemt's own set (07-telemt-sdk.md): bad_request, access_not_editable, section_not_editable, field_not_editable, unauthorized, forbidden, method_not_allowed, config_patch_not_atomic, payload_too_large, api_disabled, maestro_unavailable — except access_not_editable/section_not_editable/field_not_editable/ config_patch_not_atomic/ambiguous_listeners on PATCH /api/telemt/config, which the panel remaps to HTTP 422 regardless of Telemt's own status. The WEB group (Telemt >= 3.5.3, internal/telemt/types_web.go) adds web_runtime_mismatch, web_issuance_enabled, web_operation_in_progress, web_snapshot_busy, web_session_not_found, web_operation_not_found and unsupported_media_type; web_runtime_unavailable is listed because it is Telemt's own code, but the panel remaps it to capability_unavailable (rule R5) so the closed-capability gate is drawn instead of an error. Every code in this enum must carry a message in BOTH dictionaries — web/src/i18n/i18n.test.ts walks this list.
+     * Machine code. Panel codes actually emitted today (grepped from every WriteError call site): bad_request, invalid_credentials, rate_limited, session_expired, csrf_rejected, auth_disabled, internal_error, not_found, telemt_unreachable, capability_absent, capability_unavailable, manual_restart_required, update_locked, sublink_unavailable, log_tail_unavailable, log_stream_unavailable, log_source_error, invalid_webauthn_origin, invalid_webauthn_challenge, invalid_webauthn_response, webauthn_credential_exists, passkey_unavailable, quota_reset_busy, quota_confirmation_expired, quota_operation_unavailable, invalid_toml, invalid_config_path, config_unset_unsupported, no_changes, toml_projection_failed. capability_absent (501) vs capability_unavailable (503) are deliberately distinct, not aliases: capability_absent means the route itself doesn't exist on this Telemt build (a bare 404/405 with no error envelope — detected reactively, after attempting the call: rotate-secret, enable/disable, POST /api/telemt/reload, GET /api/telemt/reload/{id}); capability_unavailable means the route exists but the feature behind it is switched off on this Telemt — either known up front from the SDK's cached Capabilities probe (GET/PATCH /api/telemt/config, config_api) or reported by the response itself (GET /api/telemt/tls-fingerprints, whose enabled:false means runtime_edge_enabled is off; read from the response rather than probed so an unreachable Telemt still maps to 502 telemt_unreachable). Reserved for milestones not yet implemented: telemt_auth_failed (superseded on /api/telemt/info by a reachable:false body, not an error status — kept here for /api/telemt/config, M3). A well-formed Telemt *APIError whose status is 4xx and isn't otherwise mapped above is passed through verbatim with Telemt's own code — notably user_exists, last_user_forbidden, read_only, revision_conflict, reload_in_progress, reload_not_found, ambiguous_listeners (the latter two absent from Telemt's own documented error-code table but confirmed against its source, M3), plus any other code in Telemt's own set (07-telemt-sdk.md): bad_request, access_not_editable, section_not_editable, field_not_editable, unauthorized, forbidden, method_not_allowed, config_patch_not_atomic, payload_too_large, api_disabled, maestro_unavailable — except access_not_editable/section_not_editable/field_not_editable/ config_patch_not_atomic/ambiguous_listeners on PATCH /api/telemt/config, which the panel remaps to HTTP 422 regardless of Telemt's own status. The WEB group (Telemt >= 3.5.3, internal/telemt/types_web.go) adds web_runtime_mismatch, web_issuance_enabled, web_operation_in_progress, web_snapshot_busy, web_session_not_found, web_operation_not_found and unsupported_media_type; web_runtime_unavailable is listed because it is Telemt's own code, but the panel remaps it to capability_unavailable (rule R5) so the closed-capability gate is drawn instead of an error. Every code in this enum must carry a message in BOTH dictionaries — web/src/i18n/i18n.test.ts walks this list.
      *
      */
-    code: 'bad_request' | 'tls_invalid_candidate' | 'tls_manual_required' | 'tls_prepare_busy' | 'tls_prepare_unavailable' | 'tls_listener_unavailable' | 'tls_challenge_unavailable' | 'tls_cache_unavailable' | 'tls_certificate_invalid' | 'tls_certificate_untrusted' | 'tls_acquisition_failed' | 'tls_prepare_failed' | 'tls_prepare_timeout' | 'tls_config_changed' | 'tls_receipt_invalid' | 'tls_save_failed' | 'tls_restart_not_pending' | 'tls_restart_failed' | 'conflict' | 'confirmation_required' | 'invalid_credentials' | 'rate_limited' | 'session_expired' | 'csrf_rejected' | 'auth_disabled' | 'internal_error' | 'branding_invalid_title' | 'branding_invalid_mode' | 'branding_invalid_path' | 'branding_logo_unreadable' | 'branding_invalid_image' | 'not_found' | 'telemt_unreachable' | 'capability_absent' | 'capability_unavailable' | 'manual_restart_required' | 'update_locked' | 'sublink_unavailable' | 'log_tail_unavailable' | 'log_stream_unavailable' | 'log_source_error' | 'invalid_webauthn_origin' | 'invalid_webauthn_challenge' | 'invalid_webauthn_response' | 'webauthn_credential_exists' | 'passkey_unavailable' | 'telemt_auth_failed' | 'user_exists' | 'last_user_forbidden' | 'read_only' | 'revision_conflict' | 'invalid_toml' | 'invalid_config_path' | 'config_unset_unsupported' | 'no_changes' | 'toml_projection_failed' | 'reload_in_progress' | 'reload_not_found' | 'ambiguous_listeners' | 'access_not_editable' | 'section_not_editable' | 'field_not_editable' | 'unauthorized' | 'forbidden' | 'method_not_allowed' | 'config_patch_not_atomic' | 'payload_too_large' | 'api_disabled' | 'maestro_unavailable' | 'unsupported_media_type' | 'web_runtime_unavailable' | 'web_snapshot_busy' | 'web_runtime_mismatch' | 'web_issuance_enabled' | 'web_operation_in_progress' | 'web_session_not_found' | 'web_operation_not_found' | 'web_vhost_not_found' | 'web_profile_required';
+    code: 'bad_request' | 'tls_invalid_candidate' | 'tls_manual_required' | 'tls_prepare_busy' | 'tls_prepare_unavailable' | 'tls_listener_unavailable' | 'tls_challenge_unavailable' | 'tls_cache_unavailable' | 'tls_certificate_invalid' | 'tls_certificate_untrusted' | 'tls_acquisition_failed' | 'tls_prepare_failed' | 'tls_prepare_timeout' | 'tls_config_changed' | 'tls_receipt_invalid' | 'tls_save_failed' | 'tls_restart_not_pending' | 'tls_restart_failed' | 'conflict' | 'confirmation_required' | 'invalid_credentials' | 'rate_limited' | 'session_expired' | 'csrf_rejected' | 'auth_disabled' | 'quota_reset_busy' | 'invalid_quota_schedule' | 'quota_schedule_conflict' | 'quota_schedule_storage' | 'quota_schedule_unavailable' | 'quota_confirmation_expired' | 'quota_operation_unavailable' | 'internal_error' | 'branding_invalid_title' | 'branding_invalid_mode' | 'branding_invalid_path' | 'branding_logo_unreadable' | 'branding_invalid_image' | 'not_found' | 'telemt_unreachable' | 'capability_absent' | 'capability_unavailable' | 'manual_restart_required' | 'update_locked' | 'sublink_unavailable' | 'log_tail_unavailable' | 'log_stream_unavailable' | 'log_source_error' | 'invalid_webauthn_origin' | 'invalid_webauthn_challenge' | 'invalid_webauthn_response' | 'webauthn_credential_exists' | 'passkey_unavailable' | 'telemt_auth_failed' | 'user_exists' | 'last_user_forbidden' | 'read_only' | 'revision_conflict' | 'invalid_toml' | 'invalid_config_path' | 'config_unset_unsupported' | 'no_changes' | 'toml_projection_failed' | 'reload_in_progress' | 'reload_not_found' | 'ambiguous_listeners' | 'access_not_editable' | 'section_not_editable' | 'field_not_editable' | 'unauthorized' | 'forbidden' | 'method_not_allowed' | 'config_patch_not_atomic' | 'payload_too_large' | 'api_disabled' | 'maestro_unavailable' | 'unsupported_media_type' | 'web_runtime_unavailable' | 'web_snapshot_busy' | 'web_runtime_mismatch' | 'web_issuance_enabled' | 'web_operation_in_progress' | 'web_session_not_found' | 'web_operation_not_found' | 'web_vhost_not_found' | 'web_profile_required';
     message: string;
 };
 
@@ -728,7 +821,7 @@ export type AuditEntry = {
      * User
      */
     target?: string;
-    outcome: 'success' | 'accepted' | 'rejected';
+    outcome: 'success' | 'accepted' | 'rejected' | 'partial' | 'unknown';
     /**
      * Trusted client address captured by the panel
      */
@@ -1832,6 +1925,289 @@ export type WebauthnDeleteCredentialResponses = {
 
 export type WebauthnDeleteCredentialResponse = WebauthnDeleteCredentialResponses[keyof WebauthnDeleteCredentialResponses];
 
+export type GetQuotaScheduleData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/settings/quota-schedule';
+};
+
+export type GetQuotaScheduleErrors = {
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    default: Error;
+};
+
+export type GetQuotaScheduleError = GetQuotaScheduleErrors[keyof GetQuotaScheduleErrors];
+
+export type GetQuotaScheduleResponses = {
+    /**
+     * Common quota schedule and durable execution summary. Disabled by default.
+     */
+    200: QuotaScheduleView;
+};
+
+export type GetQuotaScheduleResponse = GetQuotaScheduleResponses[keyof GetQuotaScheduleResponses];
+
+export type SaveQuotaScheduleData = {
+    body: GlobalQuotaSchedule;
+    headers: {
+        'If-Match': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/settings/quota-schedule';
+};
+
+export type SaveQuotaScheduleErrors = {
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    default: Error;
+};
+
+export type SaveQuotaScheduleError = SaveQuotaScheduleErrors[keyof SaveQuotaScheduleErrors];
+
+export type SaveQuotaScheduleResponses = {
+    /**
+     * Saved for future slots only; does not reset quotas immediately.
+     */
+    200: QuotaScheduleView;
+};
+
+export type SaveQuotaScheduleResponse = SaveQuotaScheduleResponses[keyof SaveQuotaScheduleResponses];
+
+export type PreviewQuotaScheduleData = {
+    body: {
+        rule: QuotaScheduleRule;
+        timezone: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/settings/quota-schedule/preview';
+};
+
+export type PreviewQuotaScheduleErrors = {
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    default: Error;
+};
+
+export type PreviewQuotaScheduleError = PreviewQuotaScheduleErrors[keyof PreviewQuotaScheduleErrors];
+
+export type PreviewQuotaScheduleResponses = {
+    /**
+     * Three next instants calculated with the execution calendar; no task is created.
+     */
+    200: {
+        next_runs: Array<string>;
+        effective_timezone: string;
+    };
+};
+
+export type PreviewQuotaScheduleResponse = PreviewQuotaScheduleResponses[keyof PreviewQuotaScheduleResponses];
+
+export type GetUserQuotaScheduleData = {
+    body?: never;
+    path: {
+        username: string;
+    };
+    query?: never;
+    url: '/api/users/{username}/quota-schedule';
+};
+
+export type GetUserQuotaScheduleErrors = {
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    default: Error;
+};
+
+export type GetUserQuotaScheduleError = GetUserQuotaScheduleErrors[keyof GetUserQuotaScheduleErrors];
+
+export type GetUserQuotaScheduleResponses = {
+    /**
+     * User override and effective common schedule.
+     */
+    200: QuotaScheduleView;
+};
+
+export type GetUserQuotaScheduleResponse = GetUserQuotaScheduleResponses[keyof GetUserQuotaScheduleResponses];
+
+export type SaveUserQuotaScheduleData = {
+    body: UserQuotaSchedule;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        username: string;
+    };
+    query?: never;
+    url: '/api/users/{username}/quota-schedule';
+};
+
+export type SaveUserQuotaScheduleErrors = {
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    default: Error;
+};
+
+export type SaveUserQuotaScheduleError = SaveUserQuotaScheduleErrors[keyof SaveUserQuotaScheduleErrors];
+
+export type SaveUserQuotaScheduleResponses = {
+    /**
+     * Saved user policy for future slots only.
+     */
+    200: QuotaScheduleView;
+};
+
+export type SaveUserQuotaScheduleResponse = SaveUserQuotaScheduleResponses[keyof SaveUserQuotaScheduleResponses];
+
+export type PrepareBulkQuotaResetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/users/operations/quota-reset/prepare';
+};
+
+export type PrepareBulkQuotaResetErrors = {
+    /**
+     * Invalid input
+     */
+    400: Error;
+    /**
+     * No valid session
+     */
+    401: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    403: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    409: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    501: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    502: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    503: Error;
+};
+
+export type PrepareBulkQuotaResetError = PrepareBulkQuotaResetErrors[keyof PrepareBulkQuotaResetErrors];
+
+export type PrepareBulkQuotaResetResponses = {
+    /**
+     * Explicit confirmation required
+     */
+    200: QuotaResetConfirmation;
+};
+
+export type PrepareBulkQuotaResetResponse = PrepareBulkQuotaResetResponses[keyof PrepareBulkQuotaResetResponses];
+
+export type GetBulkQuotaResetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        id?: string;
+        offset?: number;
+    };
+    url: '/api/users/operations/quota-reset';
+};
+
+export type GetBulkQuotaResetErrors = {
+    /**
+     * Invalid input
+     */
+    400: Error;
+    /**
+     * No valid session
+     */
+    401: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    403: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    404: Error;
+};
+
+export type GetBulkQuotaResetError = GetBulkQuotaResetErrors[keyof GetBulkQuotaResetErrors];
+
+export type GetBulkQuotaResetResponses = {
+    /**
+     * Progress and at most 50 exception records
+     */
+    200: {
+        operation: QuotaResetOperation | null;
+    };
+};
+
+export type GetBulkQuotaResetResponse = GetBulkQuotaResetResponses[keyof GetBulkQuotaResetResponses];
+
+export type StartBulkQuotaResetData = {
+    body: {
+        token: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/users/operations/quota-reset';
+};
+
+export type StartBulkQuotaResetErrors = {
+    /**
+     * Invalid input
+     */
+    400: Error;
+    /**
+     * No valid session
+     */
+    401: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    403: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    409: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    501: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    502: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    503: Error;
+};
+
+export type StartBulkQuotaResetError = StartBulkQuotaResetErrors[keyof StartBulkQuotaResetErrors];
+
+export type StartBulkQuotaResetResponses = {
+    /**
+     * Accepted or previously accepted operation
+     */
+    202: QuotaResetOperation;
+};
+
+export type StartBulkQuotaResetResponse = StartBulkQuotaResetResponses[keyof StartBulkQuotaResetResponses];
+
 export type ListUsersData = {
     body?: never;
     path?: never;
@@ -2021,9 +2397,17 @@ export type ResetUserQuotaErrors = {
      */
     404: Error;
     /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    409: Error;
+    /**
      * telemt_unreachable | telemt_auth_failed
      */
     502: Error;
+    /**
+     * Quota operation refused or unavailable; no automatic retry of mutations.
+     */
+    503: Error;
 };
 
 export type ResetUserQuotaError = ResetUserQuotaErrors[keyof ResetUserQuotaErrors];

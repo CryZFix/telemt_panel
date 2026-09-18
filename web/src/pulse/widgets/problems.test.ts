@@ -27,7 +27,19 @@ describe("addMeRuntimeProblem", () => {
     const fallback = [{ key: "me_direct_fallback", label: "fallback" }];
     expect(addMeRuntimeProblem(fallback, { kind: "fallback" }, s)).toEqual(fallback);
     const coverage = [{ key: "me_coverage_low_2", label: "coverage" }];
-    expect(addMeRuntimeProblem(coverage, { kind: "writersLost", missing: 2 }, s)).toEqual(coverage);
+    expect(addMeRuntimeProblem(coverage, { kind: "coverage", pct: 50 }, s)).toEqual(coverage);
+  });
+
+  it("explains draining and relative RTT without claiming missing routes", () => {
+    const draining=addMeRuntimeProblem([], {kind:"draining",count:2}, s)[0]!;
+    expect(draining.label).toBe(s.pulse.problems.meRuntimeDraining);
+    expect(draining.detail).toBe("Писателей в дренаже: 2");
+    expect(draining.hint).toContain("не означает нехватку");
+    const latency=addMeRuntimeProblem([], {kind:"degradedWriters",count:2}, s)[0]!;
+    expect(latency.label).toBe(s.pulse.problems.meRuntimeLatency);
+    expect(latency.detail).toBe("Писателей с повышенным RTT: 2");
+    expect(latency.hint).toContain("более чем вдвое");
+    expect(latency.hint).toContain("не фиксированный порог");
   });
 });
 

@@ -23,6 +23,7 @@ import (
 	"github.com/amirotin/telemt_panel/internal/host"
 	"github.com/amirotin/telemt_panel/internal/hub"
 	"github.com/amirotin/telemt_panel/internal/paneltls"
+	"github.com/amirotin/telemt_panel/internal/quotareset"
 	"github.com/amirotin/telemt_panel/internal/store"
 	"github.com/amirotin/telemt_panel/internal/subpage"
 	"github.com/amirotin/telemt_panel/internal/telemt"
@@ -32,18 +33,20 @@ import (
 
 // Server holds the panel's HTTP dependencies.
 type Server struct {
-	access        *panelAccess
-	tlsManager    *paneltls.Manager
-	subTLSManager *paneltls.Manager
-	cfg           *config.Config
-	tc            *telemt.Client
-	st            store.Store
-	hub           *hub.Hub
-	limiter       *auth.Limiter
-	subSvc        *subpage.Service
-	subIndex      *subpage.Index
-	subLimiter    *subpage.RateLimiter
-	version       string
+	quotaResets    *quotareset.Manager
+	quotaSchedules *quotareset.Scheduler
+	access         *panelAccess
+	tlsManager     *paneltls.Manager
+	subTLSManager  *paneltls.Manager
+	cfg            *config.Config
+	tc             *telemt.Client
+	st             store.Store
+	hub            *hub.Hub
+	limiter        *auth.Limiter
+	subSvc         *subpage.Service
+	subIndex       *subpage.Index
+	subLimiter     *subpage.RateLimiter
+	version        string
 
 	svcMgr         host.ServiceManager
 	logSrc         host.LogSource
@@ -180,7 +183,7 @@ func New(cfg *config.Config, tc *telemt.Client, st store.Store, hb *hub.Hub, ver
 		webUI.SetBranding(appearance.Public)
 	}
 
-	return &Server{
+	s := &Server{
 		access:             newPanelAccess(),
 		tlsManager:         paneltls.New(cfg.TLS, cfg.Listen),
 		subTLSManager:      paneltls.New(cfg.Subpage.TLS, cfg.Subpage.Listen),
@@ -206,6 +209,9 @@ func New(cfg *config.Config, tc *telemt.Client, st store.Store, hb *hub.Hub, ver
 		telemtServiceName:  telemtServiceName,
 		webUI:              webUI,
 	}
+	s.quotaResets = quotareset.New(tc, s.quotaResetEvent)
+	s.quotaSchedules = quotareset.NewScheduler(st, s.quotaResets)
+	return s
 }
 
 // updatePrivilegeProbeOps is the complete privileged command surface both
@@ -341,6 +347,14 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/auth/webauthn/credentials/{credentialId}", protect(sessionOnly(s.handleWebAuthnCredentialDelete)))
 
 	mux.Handle("GET /api/telemt/info", protect(s.handleTelemtInfo))
+	mux.Handle("POST /api/users/operations/quota-reset/prepare", protect(s.handlePrepareQuotaReset))
+	mux.Handle("POST /api/users/operations/quota-reset", protect(s.handleStartQuotaReset))
+	mux.Handle("GET /api/users/operations/quota-reset", protect(s.handleQuotaResetStatus))
+	mux.Handle("GET /api/settings/quota-schedule", protect(s.handleQuotaSchedule))
+	mux.Handle("PUT /api/settings/quota-schedule", protect(s.handleSaveQuotaSchedule))
+	mux.Handle("POST /api/settings/quota-schedule/preview", protect(s.handlePreviewQuotaSchedule))
+	mux.Handle("GET /api/users/{username}/quota-schedule", protect(s.handleQuotaSchedule))
+	mux.Handle("PUT /api/users/{username}/quota-schedule", protect(s.handleSaveUserQuotaSchedule))
 	mux.Handle("GET /api/telemt/config", protect(s.handleGetTelemtConfig))
 	mux.Handle("GET /api/telemt/web-access", protect(s.handleGetTelemtWebAccess))
 	mux.Handle("PUT /api/telemt/web-access/users/{username}", protect(s.handlePutTelemtUserWebAccess))
@@ -524,6 +538,8 @@ func apiJSONFallback(mux *http.ServeMux) http.Handler {
 
 // Run serves until ctx is canceled, then drains connections.
 func (s *Server) Run(ctx context.Context) error {
+	stopQuota := context.AfterFunc(ctx, s.quotaResets.Close)
+	defer stopQuota()
 	stopAccess := context.AfterFunc(ctx, s.access.cancel)
 	defer stopAccess()
 	defer s.access.close()
@@ -542,6 +558,11 @@ func (s *Server) Run(ctx context.Context) error {
 		defer wg.Done()
 		s.autoUpdater.Run(ctx)
 	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.quotaSchedules.Run(ctx)
+	}()
 	if s.geoip != nil {
 		wg.Add(1)
 		go func() {
@@ -556,6 +577,7 @@ func (s *Server) Run(ctx context.Context) error {
 	defer s.logStreams.Close()
 	defer s.tlsManager.Close()
 	defer s.subTLSManager.Close()
+	defer s.quotaResets.Close()
 	tlsConfig, challengeHandler, err := s.tlsManager.Prepare()
 	if err != nil {
 		return err

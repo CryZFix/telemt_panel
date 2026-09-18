@@ -409,6 +409,10 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if username, ok := userActionRoute(path, "/reset-quota"); ok && r.Method == http.MethodPost {
+		if revision := r.Header.Get("If-Match"); revision != "" && revision != s.revision() {
+			writeErr(w, http.StatusConflict, "revision_conflict", "configuration changed")
+			return
+		}
 		s.handleResetQuota(w, username)
 		return
 	}

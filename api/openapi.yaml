@@ -379,6 +379,138 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "403": { description: Authentication disabled or request rejected, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
 
+  /api/settings/quota-schedule:
+    get:
+      tags: [settings]
+      operationId: getQuotaSchedule
+      responses:
+        "200":
+          description: Common quota schedule and durable execution summary. Disabled by default.
+          content: { application/json: { schema: { $ref: "#/components/schemas/QuotaScheduleView" } } }
+        default: { $ref: "#/components/responses/QuotaResetError" }
+    put:
+      tags: [settings]
+      operationId: saveQuotaSchedule
+      parameters:
+        - { in: header, name: If-Match, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/GlobalQuotaSchedule" } } }
+      responses:
+        "200":
+          description: Saved for future slots only; does not reset quotas immediately.
+          content: { application/json: { schema: { $ref: "#/components/schemas/QuotaScheduleView" } } }
+        default: { $ref: "#/components/responses/QuotaResetError" }
+  /api/settings/quota-schedule/preview:
+    post:
+      tags: [settings]
+      operationId: previewQuotaSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rule, timezone]
+              properties:
+                rule: { $ref: "#/components/schemas/QuotaScheduleRule" }
+                timezone: { type: string }
+      responses:
+        "200":
+          description: Three next instants calculated with the execution calendar; no task is created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [next_runs, effective_timezone]
+                properties:
+                  next_runs: { type: array, items: { type: string, format: date-time } }
+                  effective_timezone: { type: string }
+        default: { $ref: "#/components/responses/QuotaResetError" }
+  /api/users/{username}/quota-schedule:
+    parameters:
+      - { in: path, name: username, required: true, schema: { type: string } }
+    get:
+      tags: [users]
+      operationId: getUserQuotaSchedule
+      responses:
+        "200":
+          description: User override and effective common schedule.
+          content: { application/json: { schema: { $ref: "#/components/schemas/QuotaScheduleView" } } }
+        default: { $ref: "#/components/responses/QuotaResetError" }
+    put:
+      tags: [users]
+      operationId: saveUserQuotaSchedule
+      parameters:
+        - { in: header, name: If-Match, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UserQuotaSchedule" } } }
+      responses:
+        "200":
+          description: Saved user policy for future slots only.
+          content: { application/json: { schema: { $ref: "#/components/schemas/QuotaScheduleView" } } }
+        default: { $ref: "#/components/responses/QuotaResetError" }
+  /api/users/operations/quota-reset/prepare:
+    post:
+      tags: [users]
+      operationId: prepareBulkQuotaReset
+      description: Prepare all configured users with a fresh revision. No quota is changed. Confirmation expires in two minutes.
+      responses:
+        "200":
+          description: Explicit confirmation required
+          content: { application/json: { schema: { $ref: "#/components/schemas/QuotaResetConfirmation" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/QuotaResetError" }
+        "409": { $ref: "#/components/responses/QuotaResetError" }
+        "501": { $ref: "#/components/responses/QuotaResetError" }
+        "502": { $ref: "#/components/responses/QuotaResetError" }
+        "503": { $ref: "#/components/responses/QuotaResetError" }
+  /api/users/operations/quota-reset:
+    post:
+      tags: [users]
+      operationId: startBulkQuotaReset
+      description: >
+        Start one sequential operation for the confirmed revision. An accepted token
+        returns the same operation when repeated, never a second reset. No automatic
+        retry or restart recovery; limits and panel traffic/IP history stay unchanged.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string, minLength: 32, maxLength: 32 } } } } }
+      responses:
+        "202":
+          description: Accepted or previously accepted operation
+          content: { application/json: { schema: { $ref: "#/components/schemas/QuotaResetOperation" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/QuotaResetError" }
+        "409": { $ref: "#/components/responses/QuotaResetError" }
+        "501": { $ref: "#/components/responses/QuotaResetError" }
+        "502": { $ref: "#/components/responses/QuotaResetError" }
+        "503": { $ref: "#/components/responses/QuotaResetError" }
+    get:
+      tags: [users]
+      operationId: getBulkQuotaReset
+      description: Current/last in-memory operation; null before any start. A requested id that was lost/replaced returns 404, never fabricated success.
+      parameters:
+        - { name: id, in: query, schema: { type: string, maxLength: 32 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Progress and at most 50 exception records
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [operation]
+                properties:
+                  operation: { anyOf: [{ $ref: "#/components/schemas/QuotaResetOperation" }, { type: "null" }] }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/QuotaResetError" }
+        "404": { $ref: "#/components/responses/QuotaResetError" }
+
   # ───────────────────────── users ─────────────────────────
   /api/users:
     get:
@@ -468,6 +600,8 @@ paths:
                   last_reset_epoch_secs: { type: integer, format: int64 }
         "404": { $ref: "#/components/responses/NotFound" }
         "403": { $ref: "#/components/responses/TelemtReadOnly" }
+        "409": { $ref: "#/components/responses/QuotaResetError" }
+        "503": { $ref: "#/components/responses/QuotaResetError" }
         "502": { $ref: "#/components/responses/TelemtUnreachable" }
 
   /api/users/{username}/ip-history:
@@ -1306,6 +1440,9 @@ components:
       schema: { type: string, pattern: "^[A-Za-z0-9_.-]{1,64}$" }
 
   responses:
+    QuotaResetError:
+      description: Quota operation refused or unavailable; no automatic retry of mutations.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
     PanelTlsError:
       description: Actionable transport error; current listener stays active. Error code is stable and message contains no key/account data.
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
@@ -1332,6 +1469,92 @@ components:
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
 
   schemas:
+    QuotaScheduleRule:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [interval, cron] }
+        days: { type: integer, minimum: 1, maximum: 3650000 }
+        start: { type: string, format: date }
+        time: { type: string, description: 'Local HH:mm in the panel schedule timezone.' }
+        cron: { type: string, maxLength: 160, description: 'Five fields; no seconds, command, macros or extensions. Day-of-month and weekday use OR.' }
+    GlobalQuotaSchedule:
+      type: object
+      required: [enabled, timezone, rule]
+      properties:
+        enabled: { type: boolean }
+        timezone: { type: string, description: 'IANA timezone; server resolves to the current server zone on save.' }
+        rule: { $ref: "#/components/schemas/QuotaScheduleRule" }
+    UserQuotaSchedule:
+      type: object
+      required: [mode]
+      properties:
+        mode: { type: string, enum: [inherit, custom, off] }
+        rule: { $ref: "#/components/schemas/QuotaScheduleRule" }
+    ScheduledQuotaRun:
+      type: object
+      required: [id, state, started_at, total]
+      properties:
+        id: { type: string }
+        state: { type: string }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time }
+        total: { type: integer }
+        confirmed: { type: integer, description: 'Absent when a restart prevented observing the result; not zero.' }
+        unknown: { type: integer }
+        rejected: { type: integer }
+        remaining: { type: integer }
+        reason: { type: string }
+    QuotaScheduleView:
+      type: object
+      required: [revision, global, effective, server_timezone, effective_timezone, durable, next_runs, custom_count, excluded_count]
+      properties:
+        revision: { type: string }
+        global: { $ref: "#/components/schemas/GlobalQuotaSchedule" }
+        policy: { $ref: "#/components/schemas/UserQuotaSchedule" }
+        effective: { type: boolean }
+        server_timezone: { type: string }
+        effective_timezone: { type: string }
+        durable: { type: boolean }
+        next_runs: { type: array, items: { type: string, format: date-time } }
+        next_due: { type: string, format: date-time }
+        custom_count: { type: integer }
+        excluded_count: { type: integer }
+        last: { $ref: "#/components/schemas/ScheduledQuotaRun" }
+        error: { type: string }
+    QuotaResetConfirmation:
+      type: object
+      required: [token, total, expires_at]
+      properties:
+        token: { type: string, minLength: 32, maxLength: 32 }
+        total: { type: integer, minimum: 1 }
+        expires_at: { type: string, format: date-time }
+    QuotaResetIssue:
+      type: object
+      required: [username, outcome, code]
+      properties:
+        username: { type: string }
+        outcome: { type: string, enum: [rejected, unknown] }
+        code: { type: string, enum: [not_found, read_only, revision_conflict, telemt_auth_failed, capability_absent, reset_unconfirmed] }
+    QuotaResetOperation:
+      type: object
+      required: [id, state, total, processed, confirmed, rejected, unknown, remaining, reason, started_at, issues, issues_total]
+      properties:
+        id: { type: string }
+        trigger: { type: string, enum: [schedule], description: Absent for manually confirmed operations. }
+        state: { type: string, enum: [running, completed, stopped] }
+        total: { type: integer }
+        processed: { type: integer }
+        confirmed: { type: integer }
+        rejected: { type: integer }
+        unknown: { type: integer }
+        remaining: { type: integer }
+        reason: { type: string }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time }
+        issues: { type: array, items: { $ref: "#/components/schemas/QuotaResetIssue" } }
+        issues_total: { type: integer }
+        next_offset: { type: integer }
     BrandingConfig:
       type: object
       required: [title, logo_mode, logo_path]
@@ -1469,6 +1692,13 @@ components:
             - session_expired
             - csrf_rejected
             - auth_disabled
+            - quota_reset_busy
+            - invalid_quota_schedule
+            - quota_schedule_conflict
+            - quota_schedule_storage
+            - quota_schedule_unavailable
+            - quota_confirmation_expired
+            - quota_operation_unavailable
             - internal_error
             - branding_invalid_title
             - branding_invalid_mode
@@ -1533,6 +1763,7 @@ components:
             invalid_webauthn_origin,
             invalid_webauthn_challenge, invalid_webauthn_response,
             webauthn_credential_exists, passkey_unavailable,
+            quota_reset_busy, quota_confirmation_expired, quota_operation_unavailable,
             invalid_toml, invalid_config_path, config_unset_unsupported,
             no_changes, toml_projection_failed.
             capability_absent (501) vs capability_unavailable (503) are
@@ -2213,7 +2444,7 @@ components:
         action: { type: string, description: "login | user.create | user.patch | user.delete | quota.reset | config.patch | update.apply | ..." }
         actor: { type: string, description: Authenticated administrator or attempted login name }
         target: { type: string, description: User, service, config, or panel resource affected by the action }
-        outcome: { type: string, enum: [success, accepted, rejected] }
+        outcome: { type: string, enum: [success, accepted, rejected, partial, unknown] }
         ip: { type: string, description: Trusted client address captured by the panel }
         subject: { type: string, description: Username / target / section }
         detail: { type: string }

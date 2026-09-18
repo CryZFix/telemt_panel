@@ -237,5 +237,5 @@ func (s *Server) handleResetQuota(w http.ResponseWriter, username string) {
 		Username           string `json:"username"`
 		UsedBytes          uint64 `json:"used_bytes"`
 		LastResetEpochSecs int64  `json:"last_reset_epoch_secs"`
-	}{username, 0, q.LastResetEpochSecs}, s.bumpRevision())
+	}{username, 0, q.LastResetEpochSecs}, s.revision())
 }

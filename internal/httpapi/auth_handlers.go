@@ -327,7 +327,6 @@ func (s *Server) handleRevokeSession(w http.ResponseWriter, r *http.Request) {
 // a store error — the audit log is best-effort observability, not the
 // source of truth for whether the action itself succeeded.
 func (s *Server) appendAudit(r *http.Request, action, subject, detail string) {
-	now := time.Now()
 	actor, _ := auth.UsernameFromContext(r.Context())
 	if actor == "" && (action == "login" || action == "login.failed") {
 		actor = subject
@@ -336,6 +335,11 @@ func (s *Server) appendAudit(r *http.Request, action, subject, detail string) {
 	if strings.HasPrefix(detail, "ip=") {
 		ip = strings.TrimPrefix(detail, "ip=")
 	}
+	s.appendAuditIdentity(actor, ip, action, subject, detail)
+}
+
+func (s *Server) appendAuditIdentity(actor, ip, action, subject, detail string) {
+	now := time.Now()
 	err := s.st.AppendAudit(store.AuditEntry{
 		TS:      now,
 		ID:      auditEntryID(now),
@@ -364,6 +368,8 @@ func (s *Server) appendAudit(r *http.Request, action, subject, detail string) {
 func administrativeHistoryEvent(ts time.Time, action, subject string) (store.HistoryEvent, bool) {
 	switch action {
 	case "config.patch", "config.patch.toml", "config.web_access",
+		"quota.schedule.global", "quota.schedule.user", "quota.schedule.completed", "quota.schedule.partial", "quota.schedule.stopped", "quota.schedule.interrupted",
+		"quota.reset_all.completed", "quota.reset_all.partial", "quota.reset_all.stopped", "quota.reset_all.interrupted",
 		"quota.reset", "secret.rotate", "storage.history_purge", "storage.policy_change",
 		"sublink.rotate", "telemt.reload", "telemt.restart", "update.apply",
 		"update.auto_change", "user.create", "user.delete", "user.enabled", "user.traffic_reset", "user.ip_history_reset", "traffic.reset",
@@ -375,7 +381,7 @@ func administrativeHistoryEvent(ts time.Time, action, subject string) (store.His
 		return store.HistoryEvent{}, false
 	}
 	severity := "info"
-	if action == "user.delete" || action == "user.traffic_reset" || action == "user.ip_history_reset" || action == "traffic.reset" || action == "storage.history_purge" || action == "telemt.restart" {
+	if action == "user.delete" || action == "user.traffic_reset" || action == "user.ip_history_reset" || action == "traffic.reset" || action == "storage.history_purge" || action == "telemt.restart" || strings.HasPrefix(action, "quota.reset_all.") && action != "quota.reset_all.completed" || action == "quota.schedule.partial" || action == "quota.schedule.stopped" || action == "quota.schedule.interrupted" {
 		severity = "warning"
 	}
 	return store.HistoryEvent{
@@ -389,6 +395,9 @@ func administrativeHistoryEvent(ts time.Time, action, subject string) (store.His
 }
 
 func auditTarget(action, subject string) string {
+	if strings.HasPrefix(action, "quota.reset_all.") || strings.HasPrefix(action, "quota.schedule.") && subject == "" {
+		return "users"
+	}
 	if subject != "" && action != "login" && action != "login.failed" && action != "logout" && !strings.HasPrefix(action, "passkey.") {
 		return subject
 	}
@@ -410,6 +419,14 @@ func auditTarget(action, subject string) string {
 }
 
 func auditOutcome(action string) string {
+	switch action {
+	case "quota.reset_all.started", "quota.schedule.started":
+		return "accepted"
+	case "quota.reset_all.partial", "quota.reset_all.stopped", "quota.schedule.partial", "quota.schedule.stopped":
+		return "partial"
+	case "quota.reset_all.interrupted", "quota.schedule.interrupted":
+		return "unknown"
+	}
 	if action == "login.failed" {
 		return "rejected"
 	}

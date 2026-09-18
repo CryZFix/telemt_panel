@@ -262,6 +262,11 @@ func (c *Client) Users(ctx context.Context) ([]UserInfo, error) {
 	return get[[]UserInfo](ctx, c, "/v1/users")
 }
 
+// UsersWithRevision binds an explicit bulk operation to the displayed config.
+func (c *Client) UsersWithRevision(ctx context.Context) ([]UserInfo, string, error) {
+	return getRevision[[]UserInfo](ctx, c, "/v1/users")
+}
+
 // StatsSummary calls GET /v1/stats/summary.
 func (c *Client) StatsSummary(ctx context.Context) (SummaryData, error) {
 	return get[SummaryData](ctx, c, "/v1/stats/summary")
@@ -342,6 +347,12 @@ func (c *Client) DeleteUser(ctx context.Context, username string) error {
 // Telemt does not echo the configured limit back on this endpoint.
 func (c *Client) ResetQuota(ctx context.Context, username string) (QuotaEntry, error) {
 	return mutate[QuotaEntry](ctx, c, http.MethodPost, "/v1/users/"+url.PathEscape(username)+"/reset-quota", nil)
+}
+
+// ResetQuotaWithRevision refuses a reset if the confirmed config has changed.
+func (c *Client) ResetQuotaWithRevision(ctx context.Context, username, revision string) (QuotaEntry, error) {
+	q, _, err := mutateRevision[QuotaEntry](ctx, c, http.MethodPost, "/v1/users/"+url.PathEscape(username)+"/reset-quota", nil, revision)
+	return q, err
 }
 
 // RotateSecret calls POST /v1/users/{username}/rotate-secret, returning the

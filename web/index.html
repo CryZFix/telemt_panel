@@ -19,7 +19,39 @@
          scripts/generate-icons.mjs. -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <title>Telemt Panel</title>
+    <style>
+      #panel-bootstrap { position:fixed; inset:0; display:grid; place-items:center; padding:24px; background:#12171d; color:#e6edf3; font:15px/1.55 system-ui,sans-serif; }
+      #panel-bootstrap article { width:100%; max-width:440px; padding:24px; box-sizing:border-box; border:1px solid #303b46; border-radius:16px; background:#18212a; }
+      #panel-bootstrap h1 { margin:0 0 12px; font-size:23px; overflow-wrap:anywhere; }
+      #panel-bootstrap p { margin:10px 0; }
+      #panel-bootstrap code { font-size:13px; }
+      #panel-bootstrap button { margin-top:12px; min-height:44px; padding:10px 16px; border:0; border-radius:9px; color:white; background:#296fa8; font:inherit; cursor:pointer; }
+      #panel-bootstrap button:focus-visible { outline:2px solid #8bc9fa; outline-offset:3px; }
+      #panel-bootstrap [hidden], html[lang="ru"] #panel-bootstrap .boot-en, html:not([lang="ru"]) #panel-bootstrap .boot-ru { display:none!important; }
+      html[data-theme="light"] #panel-bootstrap, html[data-theme="parchment"] #panel-bootstrap { background:#f4f6f8; color:#192532; }
+      html[data-theme="light"] #panel-bootstrap article, html[data-theme="parchment"] #panel-bootstrap article { background:#fff; border-color:#d2dbe4; }
+    </style>
     <script>
+      // This fallback must work when the module graph itself fails to load.
+      // Only an actual module/resource or same-origin startup error triggers it;
+      // slow downloads never become failures merely because a timer elapsed.
+      window.addEventListener("error", function (event) {
+        var target = event.target;
+        var moduleFailure = target && target.tagName === "SCRIPT" && target.type === "module";
+        var startupException = false;
+        if (target === window && event.filename) {
+          try { startupException = new URL(event.filename, location.href).origin === location.origin; } catch (e) {}
+        }
+        if (!moduleFailure && !startupException) return;
+        function showFailure() {
+          var error = document.getElementById("panel-bootstrap-error");
+          var loading = document.getElementById("panel-bootstrap-loading");
+          if (error && loading) { error.hidden = false; loading.hidden = true; }
+        }
+        showFailure();
+        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", showFailure, { once:true });
+      }, true);
+
       // Applied before first paint to avoid a flash of the wrong theme —
       // src/lib/theme.ts owns this logic at runtime; this is a minimal,
       // dependency-free duplicate of just the "read + apply" half.
@@ -70,7 +102,27 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <section id="panel-bootstrap" aria-live="polite">
+        <article>
+          <h1 id="panel-bootstrap-title">Panel</h1>
+          <p id="panel-bootstrap-loading"><span class="boot-ru">Загрузка интерфейса…</span><span class="boot-en">Loading the interface…</span></p>
+          <div id="panel-bootstrap-error" role="alert" hidden>
+            <p><strong class="boot-ru">Не удалось загрузить интерфейс</strong><strong class="boot-en">The interface could not be loaded</strong></p>
+            <p class="boot-ru">HTML панели доступен, но её код не загрузился или не смог запуститься. Проверьте сеть и ошибки загрузки файлов в браузере.</p>
+            <p class="boot-en">The panel HTML is available, but its code failed to load or start. Check connectivity and browser file-loading errors.</p>
+            <p class="boot-ru">За reverse proxy проверьте совпадение <code>base_path</code> и пути в nginx/Caddy. Прокси должен передавать этот префикс панели без удаления.</p>
+            <p class="boot-en">Behind a reverse proxy, check that <code>base_path</code> matches the nginx/Caddy path. Forward this prefix to the panel without stripping it.</p>
+            <button type="button" id="panel-bootstrap-reload"><span class="boot-ru">Повторить загрузку</span><span class="boot-en">Reload</span></button>
+          </div>
+          <noscript><p>Включите JavaScript для работы панели. / Enable JavaScript to use this panel.</p></noscript>
+        </article>
+      </section>
+    </div>
+    <script>
+      document.getElementById("panel-bootstrap-title").textContent = document.title;
+      document.getElementById("panel-bootstrap-reload").addEventListener("click", function () { location.reload(); });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

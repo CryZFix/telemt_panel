@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { applyUpdate, closeTelemtWebSessions, createUser, deleteUser, getAudit, getAuthMethods, getAutoUpdate, getBrandingIcon, getBrandingLogo, getBrandingSettings, getGeoIpSettings, getHealth, getHistory, getHistoryEvents, getHost, getMe, getPanelTls, getPanelTlsConfig, getPublicBranding, getSnapshot, getStorageSettings, getSubscriptionPage, getTelemtConfig, getTelemtConfigCatalog, getTelemtConfigToml, getTelemtInfo, getTelemtReloadStatus, getTelemtTlsFingerprints, getTelemtWebAccess, getTelemtWebOperation, getTelemtWebSession, getTelemtWebSessions, getTelemtZero, getTrafficSummary, getTrafficUsers, getUpdates, getUser, getUserIpHistory, getUserSublink, getUserTrafficHistory, listSessions, listUsers, login, logout, type Options, patchTelemtConfig, patchTelemtConfigToml, patchUser, preparePanelTls, previewTelemtConfigToml, purgeStorageHistory, putAutoUpdate, putBrandingSettings, putGeoIpSettings, putPanelTlsConfig, putStorageSettings, putTelemtUserWebAccess, regenerateUserSublink, reloadTelemt, resetAllUserTraffic, resetUserIpHistory, resetUserQuota, resetUserTraffic, restartPanelTls, restartTelemtService, revokeOtherSessions, revokeSession, rotateUserSecret, setUserEnabled, tailLogs, updateGeoIp, webauthnDeleteCredential, webauthnLoginBegin, webauthnLoginFinish, webauthnRegisterBegin, webauthnRegisterFinish } from '../sdk.gen';
-import type { ApplyUpdateData, ApplyUpdateError, CloseTelemtWebSessionsData, CloseTelemtWebSessionsError, CloseTelemtWebSessionsResponse, CreateUserData, CreateUserError, CreateUserResponse, DeleteUserData, DeleteUserError, DeleteUserResponse, GetAuditData, GetAuditError, GetAuditResponse, GetAuthMethodsData, GetAuthMethodsResponse, GetAutoUpdateData, GetAutoUpdateError, GetAutoUpdateResponse, GetBrandingIconData, GetBrandingIconResponse, GetBrandingLogoData, GetBrandingLogoResponse, GetBrandingSettingsData, GetBrandingSettingsError, GetBrandingSettingsResponse, GetGeoIpSettingsData, GetGeoIpSettingsError, GetGeoIpSettingsResponse, GetHealthData, GetHealthResponse, GetHistoryData, GetHistoryError, GetHistoryEventsData, GetHistoryEventsError, GetHistoryEventsResponse, GetHistoryResponse, GetHostData, GetHostResponse, GetMeData, GetMeError, GetMeResponse, GetPanelTlsConfigData, GetPanelTlsConfigError, GetPanelTlsConfigResponse, GetPanelTlsData, GetPanelTlsError, GetPanelTlsResponse, GetPublicBrandingData, GetPublicBrandingResponse, GetSnapshotData, GetSnapshotError, GetSnapshotResponse, GetStorageSettingsData, GetStorageSettingsResponse, GetSubscriptionPageData, GetSubscriptionPageError, GetSubscriptionPageResponse, GetTelemtConfigCatalogData, GetTelemtConfigCatalogResponse, GetTelemtConfigData, GetTelemtConfigError, GetTelemtConfigResponse, GetTelemtConfigTomlData, GetTelemtConfigTomlError, GetTelemtConfigTomlResponse, GetTelemtInfoData, GetTelemtInfoResponse, GetTelemtReloadStatusData, GetTelemtReloadStatusError, GetTelemtReloadStatusResponse, GetTelemtTlsFingerprintsData, GetTelemtTlsFingerprintsError, GetTelemtTlsFingerprintsResponse, GetTelemtWebAccessData, GetTelemtWebAccessError, GetTelemtWebAccessResponse, GetTelemtWebOperationData, GetTelemtWebOperationError, GetTelemtWebOperationResponse, GetTelemtWebSessionData, GetTelemtWebSessionError, GetTelemtWebSessionResponse, GetTelemtWebSessionsData, GetTelemtWebSessionsError, GetTelemtWebSessionsResponse, GetTelemtZeroData, GetTelemtZeroError, GetTelemtZeroResponse, GetTrafficSummaryData, GetTrafficSummaryError, GetTrafficSummaryResponse, GetTrafficUsersData, GetTrafficUsersError, GetTrafficUsersResponse, GetUpdatesData, GetUpdatesResponse, GetUserData, GetUserError, GetUserIpHistoryData, GetUserIpHistoryError, GetUserIpHistoryResponse, GetUserResponse, GetUserSublinkData, GetUserSublinkError, GetUserSublinkResponse, GetUserTrafficHistoryData, GetUserTrafficHistoryError, GetUserTrafficHistoryResponse, ListSessionsData, ListSessionsError, ListSessionsResponse, ListUsersData, ListUsersError, ListUsersResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, PatchTelemtConfigData, PatchTelemtConfigError, PatchTelemtConfigResponse, PatchTelemtConfigTomlData, PatchTelemtConfigTomlError, PatchTelemtConfigTomlResponse, PatchUserData, PatchUserError, PatchUserResponse, PreparePanelTlsData, PreparePanelTlsError, PreparePanelTlsResponse, PreviewTelemtConfigTomlData, PreviewTelemtConfigTomlError, PreviewTelemtConfigTomlResponse, PurgeStorageHistoryData, PurgeStorageHistoryError, PurgeStorageHistoryResponse, PutAutoUpdateData, PutAutoUpdateError, PutAutoUpdateResponse, PutBrandingSettingsData, PutBrandingSettingsError, PutBrandingSettingsResponse, PutGeoIpSettingsData, PutGeoIpSettingsError, PutGeoIpSettingsResponse, PutPanelTlsConfigData, PutPanelTlsConfigError, PutPanelTlsConfigResponse, PutStorageSettingsData, PutStorageSettingsError, PutStorageSettingsResponse, PutTelemtUserWebAccessData, PutTelemtUserWebAccessError, PutTelemtUserWebAccessResponse, RegenerateUserSublinkData, RegenerateUserSublinkError, RegenerateUserSublinkResponse, ReloadTelemtData, ReloadTelemtError, ReloadTelemtResponse, ResetAllUserTrafficData, ResetAllUserTrafficError, ResetAllUserTrafficResponse, ResetUserIpHistoryData, ResetUserIpHistoryError, ResetUserIpHistoryResponse, ResetUserQuotaData, ResetUserQuotaError, ResetUserQuotaResponse, ResetUserTrafficData, ResetUserTrafficError, ResetUserTrafficResponse, RestartPanelTlsData, RestartPanelTlsError, RestartPanelTlsResponse, RestartTelemtServiceData, RestartTelemtServiceError, RevokeOtherSessionsData, RevokeOtherSessionsError, RevokeOtherSessionsResponse, RevokeSessionData, RevokeSessionError, RevokeSessionResponse, RotateUserSecretData, RotateUserSecretError, RotateUserSecretResponse, SetUserEnabledData, SetUserEnabledError, SetUserEnabledResponse, TailLogsData, TailLogsError, TailLogsResponse, UpdateGeoIpData, UpdateGeoIpError, UpdateGeoIpResponse, WebauthnDeleteCredentialData, WebauthnDeleteCredentialError, WebauthnDeleteCredentialResponse, WebauthnLoginBeginData, WebauthnLoginBeginError, WebauthnLoginBeginResponse, WebauthnLoginFinishData, WebauthnLoginFinishError, WebauthnLoginFinishResponse, WebauthnRegisterBeginData, WebauthnRegisterBeginError, WebauthnRegisterBeginResponse, WebauthnRegisterFinishData, WebauthnRegisterFinishError, WebauthnRegisterFinishResponse } from '../types.gen';
+import { applyUpdate, closeTelemtWebSessions, createUser, deleteUser, getAudit, getAuthMethods, getAutoUpdate, getBrandingIcon, getBrandingLogo, getBrandingSettings, getBulkQuotaReset, getGeoIpSettings, getHealth, getHistory, getHistoryEvents, getHost, getMe, getPanelTls, getPanelTlsConfig, getPublicBranding, getQuotaSchedule, getSnapshot, getStorageSettings, getSubscriptionPage, getTelemtConfig, getTelemtConfigCatalog, getTelemtConfigToml, getTelemtInfo, getTelemtReloadStatus, getTelemtTlsFingerprints, getTelemtWebAccess, getTelemtWebOperation, getTelemtWebSession, getTelemtWebSessions, getTelemtZero, getTrafficSummary, getTrafficUsers, getUpdates, getUser, getUserIpHistory, getUserQuotaSchedule, getUserSublink, getUserTrafficHistory, listSessions, listUsers, login, logout, type Options, patchTelemtConfig, patchTelemtConfigToml, patchUser, prepareBulkQuotaReset, preparePanelTls, previewQuotaSchedule, previewTelemtConfigToml, purgeStorageHistory, putAutoUpdate, putBrandingSettings, putGeoIpSettings, putPanelTlsConfig, putStorageSettings, putTelemtUserWebAccess, regenerateUserSublink, reloadTelemt, resetAllUserTraffic, resetUserIpHistory, resetUserQuota, resetUserTraffic, restartPanelTls, restartTelemtService, revokeOtherSessions, revokeSession, rotateUserSecret, saveQuotaSchedule, saveUserQuotaSchedule, setUserEnabled, startBulkQuotaReset, tailLogs, updateGeoIp, webauthnDeleteCredential, webauthnLoginBegin, webauthnLoginFinish, webauthnRegisterBegin, webauthnRegisterFinish } from '../sdk.gen';
+import type { ApplyUpdateData, ApplyUpdateError, CloseTelemtWebSessionsData, CloseTelemtWebSessionsError, CloseTelemtWebSessionsResponse, CreateUserData, CreateUserError, CreateUserResponse, DeleteUserData, DeleteUserError, DeleteUserResponse, GetAuditData, GetAuditError, GetAuditResponse, GetAuthMethodsData, GetAuthMethodsResponse, GetAutoUpdateData, GetAutoUpdateError, GetAutoUpdateResponse, GetBrandingIconData, GetBrandingIconResponse, GetBrandingLogoData, GetBrandingLogoResponse, GetBrandingSettingsData, GetBrandingSettingsError, GetBrandingSettingsResponse, GetBulkQuotaResetData, GetBulkQuotaResetError, GetBulkQuotaResetResponse, GetGeoIpSettingsData, GetGeoIpSettingsError, GetGeoIpSettingsResponse, GetHealthData, GetHealthResponse, GetHistoryData, GetHistoryError, GetHistoryEventsData, GetHistoryEventsError, GetHistoryEventsResponse, GetHistoryResponse, GetHostData, GetHostResponse, GetMeData, GetMeError, GetMeResponse, GetPanelTlsConfigData, GetPanelTlsConfigError, GetPanelTlsConfigResponse, GetPanelTlsData, GetPanelTlsError, GetPanelTlsResponse, GetPublicBrandingData, GetPublicBrandingResponse, GetQuotaScheduleData, GetQuotaScheduleError, GetQuotaScheduleResponse, GetSnapshotData, GetSnapshotError, GetSnapshotResponse, GetStorageSettingsData, GetStorageSettingsResponse, GetSubscriptionPageData, GetSubscriptionPageError, GetSubscriptionPageResponse, GetTelemtConfigCatalogData, GetTelemtConfigCatalogResponse, GetTelemtConfigData, GetTelemtConfigError, GetTelemtConfigResponse, GetTelemtConfigTomlData, GetTelemtConfigTomlError, GetTelemtConfigTomlResponse, GetTelemtInfoData, GetTelemtInfoResponse, GetTelemtReloadStatusData, GetTelemtReloadStatusError, GetTelemtReloadStatusResponse, GetTelemtTlsFingerprintsData, GetTelemtTlsFingerprintsError, GetTelemtTlsFingerprintsResponse, GetTelemtWebAccessData, GetTelemtWebAccessError, GetTelemtWebAccessResponse, GetTelemtWebOperationData, GetTelemtWebOperationError, GetTelemtWebOperationResponse, GetTelemtWebSessionData, GetTelemtWebSessionError, GetTelemtWebSessionResponse, GetTelemtWebSessionsData, GetTelemtWebSessionsError, GetTelemtWebSessionsResponse, GetTelemtZeroData, GetTelemtZeroError, GetTelemtZeroResponse, GetTrafficSummaryData, GetTrafficSummaryError, GetTrafficSummaryResponse, GetTrafficUsersData, GetTrafficUsersError, GetTrafficUsersResponse, GetUpdatesData, GetUpdatesResponse, GetUserData, GetUserError, GetUserIpHistoryData, GetUserIpHistoryError, GetUserIpHistoryResponse, GetUserQuotaScheduleData, GetUserQuotaScheduleError, GetUserQuotaScheduleResponse, GetUserResponse, GetUserSublinkData, GetUserSublinkError, GetUserSublinkResponse, GetUserTrafficHistoryData, GetUserTrafficHistoryError, GetUserTrafficHistoryResponse, ListSessionsData, ListSessionsError, ListSessionsResponse, ListUsersData, ListUsersError, ListUsersResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, PatchTelemtConfigData, PatchTelemtConfigError, PatchTelemtConfigResponse, PatchTelemtConfigTomlData, PatchTelemtConfigTomlError, PatchTelemtConfigTomlResponse, PatchUserData, PatchUserError, PatchUserResponse, PrepareBulkQuotaResetData, PrepareBulkQuotaResetError, PrepareBulkQuotaResetResponse, PreparePanelTlsData, PreparePanelTlsError, PreparePanelTlsResponse, PreviewQuotaScheduleData, PreviewQuotaScheduleError, PreviewQuotaScheduleResponse, PreviewTelemtConfigTomlData, PreviewTelemtConfigTomlError, PreviewTelemtConfigTomlResponse, PurgeStorageHistoryData, PurgeStorageHistoryError, PurgeStorageHistoryResponse, PutAutoUpdateData, PutAutoUpdateError, PutAutoUpdateResponse, PutBrandingSettingsData, PutBrandingSettingsError, PutBrandingSettingsResponse, PutGeoIpSettingsData, PutGeoIpSettingsError, PutGeoIpSettingsResponse, PutPanelTlsConfigData, PutPanelTlsConfigError, PutPanelTlsConfigResponse, PutStorageSettingsData, PutStorageSettingsError, PutStorageSettingsResponse, PutTelemtUserWebAccessData, PutTelemtUserWebAccessError, PutTelemtUserWebAccessResponse, RegenerateUserSublinkData, RegenerateUserSublinkError, RegenerateUserSublinkResponse, ReloadTelemtData, ReloadTelemtError, ReloadTelemtResponse, ResetAllUserTrafficData, ResetAllUserTrafficError, ResetAllUserTrafficResponse, ResetUserIpHistoryData, ResetUserIpHistoryError, ResetUserIpHistoryResponse, ResetUserQuotaData, ResetUserQuotaError, ResetUserQuotaResponse, ResetUserTrafficData, ResetUserTrafficError, ResetUserTrafficResponse, RestartPanelTlsData, RestartPanelTlsError, RestartPanelTlsResponse, RestartTelemtServiceData, RestartTelemtServiceError, RevokeOtherSessionsData, RevokeOtherSessionsError, RevokeOtherSessionsResponse, RevokeSessionData, RevokeSessionError, RevokeSessionResponse, RotateUserSecretData, RotateUserSecretError, RotateUserSecretResponse, SaveQuotaScheduleData, SaveQuotaScheduleError, SaveQuotaScheduleResponse, SaveUserQuotaScheduleData, SaveUserQuotaScheduleError, SaveUserQuotaScheduleResponse, SetUserEnabledData, SetUserEnabledError, SetUserEnabledResponse, StartBulkQuotaResetData, StartBulkQuotaResetError, StartBulkQuotaResetResponse, TailLogsData, TailLogsError, TailLogsResponse, UpdateGeoIpData, UpdateGeoIpError, UpdateGeoIpResponse, WebauthnDeleteCredentialData, WebauthnDeleteCredentialError, WebauthnDeleteCredentialResponse, WebauthnLoginBeginData, WebauthnLoginBeginError, WebauthnLoginBeginResponse, WebauthnLoginFinishData, WebauthnLoginFinishError, WebauthnLoginFinishResponse, WebauthnRegisterBeginData, WebauthnRegisterBeginError, WebauthnRegisterBeginResponse, WebauthnRegisterFinishData, WebauthnRegisterFinishError, WebauthnRegisterFinishResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -441,6 +441,161 @@ export const webauthnDeleteCredentialMutation = (options?: Partial<Options<Webau
     const mutationOptions: UseMutationOptions<WebauthnDeleteCredentialResponse, WebauthnDeleteCredentialError, Options<WebauthnDeleteCredentialData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await webauthnDeleteCredential({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getQuotaScheduleQueryKey = (options?: Options<GetQuotaScheduleData>) => createQueryKey('getQuotaSchedule', options);
+
+export const getQuotaScheduleOptions = (options?: Options<GetQuotaScheduleData>) => queryOptions<GetQuotaScheduleResponse, GetQuotaScheduleError, GetQuotaScheduleResponse, ReturnType<typeof getQuotaScheduleQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getQuotaSchedule({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getQuotaScheduleQueryKey(options)
+});
+
+export const saveQuotaScheduleMutation = (options?: Partial<Options<SaveQuotaScheduleData>>): UseMutationOptions<SaveQuotaScheduleResponse, SaveQuotaScheduleError, Options<SaveQuotaScheduleData>> => {
+    const mutationOptions: UseMutationOptions<SaveQuotaScheduleResponse, SaveQuotaScheduleError, Options<SaveQuotaScheduleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await saveQuotaSchedule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const previewQuotaScheduleMutation = (options?: Partial<Options<PreviewQuotaScheduleData>>): UseMutationOptions<PreviewQuotaScheduleResponse, PreviewQuotaScheduleError, Options<PreviewQuotaScheduleData>> => {
+    const mutationOptions: UseMutationOptions<PreviewQuotaScheduleResponse, PreviewQuotaScheduleError, Options<PreviewQuotaScheduleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await previewQuotaSchedule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getUserQuotaScheduleQueryKey = (options: Options<GetUserQuotaScheduleData>) => createQueryKey('getUserQuotaSchedule', options);
+
+export const getUserQuotaScheduleOptions = (options: Options<GetUserQuotaScheduleData>) => queryOptions<GetUserQuotaScheduleResponse, GetUserQuotaScheduleError, GetUserQuotaScheduleResponse, ReturnType<typeof getUserQuotaScheduleQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getUserQuotaSchedule({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getUserQuotaScheduleQueryKey(options)
+});
+
+export const saveUserQuotaScheduleMutation = (options?: Partial<Options<SaveUserQuotaScheduleData>>): UseMutationOptions<SaveUserQuotaScheduleResponse, SaveUserQuotaScheduleError, Options<SaveUserQuotaScheduleData>> => {
+    const mutationOptions: UseMutationOptions<SaveUserQuotaScheduleResponse, SaveUserQuotaScheduleError, Options<SaveUserQuotaScheduleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await saveUserQuotaSchedule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Prepare all configured users with a fresh revision. No quota is changed. Confirmation expires in two minutes.
+ */
+export const prepareBulkQuotaResetMutation = (options?: Partial<Options<PrepareBulkQuotaResetData>>): UseMutationOptions<PrepareBulkQuotaResetResponse, PrepareBulkQuotaResetError, Options<PrepareBulkQuotaResetData>> => {
+    const mutationOptions: UseMutationOptions<PrepareBulkQuotaResetResponse, PrepareBulkQuotaResetError, Options<PrepareBulkQuotaResetData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await prepareBulkQuotaReset({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getBulkQuotaResetQueryKey = (options?: Options<GetBulkQuotaResetData>) => createQueryKey('getBulkQuotaReset', options);
+
+/**
+ * Current/last in-memory operation; null before any start. A requested id that was lost/replaced returns 404, never fabricated success.
+ */
+export const getBulkQuotaResetOptions = (options?: Options<GetBulkQuotaResetData>) => queryOptions<GetBulkQuotaResetResponse, GetBulkQuotaResetError, GetBulkQuotaResetResponse, ReturnType<typeof getBulkQuotaResetQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getBulkQuotaReset({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getBulkQuotaResetQueryKey(options)
+});
+
+export const getBulkQuotaResetInfiniteQueryKey = (options?: Options<GetBulkQuotaResetData>): QueryKey<Options<GetBulkQuotaResetData>> => createQueryKey('getBulkQuotaReset', options, true);
+
+/**
+ * Current/last in-memory operation; null before any start. A requested id that was lost/replaced returns 404, never fabricated success.
+ */
+export const getBulkQuotaResetInfiniteOptions = (options?: Options<GetBulkQuotaResetData>) => {
+    const opts = infiniteQueryOptions<GetBulkQuotaResetResponse, GetBulkQuotaResetError, InfiniteData<GetBulkQuotaResetResponse>, QueryKey<Options<GetBulkQuotaResetData>>, number | Pick<QueryKey<Options<GetBulkQuotaResetData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+    // @ts-ignore
+    {
+        queryFn: async ({ pageParam, queryKey, signal }) => {
+            // @ts-ignore
+            const page: Pick<QueryKey<Options<GetBulkQuotaResetData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+                query: {
+                    offset: pageParam
+                }
+            };
+            const params = createInfiniteParams(queryKey, page);
+            const { data } = await getBulkQuotaReset({
+                ...options,
+                ...params,
+                signal,
+                throwOnError: true
+            });
+            return data;
+        },
+        queryKey: getBulkQuotaResetInfiniteQueryKey(options)
+    });
+    return opts as Omit<typeof opts, 'initialData'>;
+};
+
+/**
+ * Start one sequential operation for the confirmed revision. An accepted token returns the same operation when repeated, never a second reset. No automatic retry or restart recovery; limits and panel traffic/IP history stay unchanged.
+ *
+ */
+export const startBulkQuotaResetMutation = (options?: Partial<Options<StartBulkQuotaResetData>>): UseMutationOptions<StartBulkQuotaResetResponse, StartBulkQuotaResetError, Options<StartBulkQuotaResetData>> => {
+    const mutationOptions: UseMutationOptions<StartBulkQuotaResetResponse, StartBulkQuotaResetError, Options<StartBulkQuotaResetData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await startBulkQuotaReset({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
